@@ -1,6 +1,6 @@
 import os, time, requests
 
-def google_image_download(query, save_directory, api_key, cx, n = 10):
+def google_image_download(query, save_directory, api_key, cx, n = 10, name = "image"):
     # Create the Google Custom Search API URL
     url = f"https://www.googleapis.com/customsearch/v1?searchType=image&key={api_key}&cx={cx}&q={query}"
 
@@ -39,7 +39,7 @@ def google_image_download(query, save_directory, api_key, cx, n = 10):
         try:
             response = requests.get(image_url, headers=headers)
             response.raise_for_status()
-            file_path = os.path.join(save_directory, f"image{saved_images+1}.jpg")
+            file_path = os.path.join(save_directory, f"{name}{saved_images+1}.jpg")
             with open(file_path, 'wb') as file:
                 file.write(response.content)
             saved_images += 1

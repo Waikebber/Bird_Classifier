@@ -14,8 +14,6 @@ parser.add_argument('--birds_txt', help='TXT file input containing the new line 
 parser.add_argument('--raw_dir', help="Directory to store raw data",default='..\\data\\raw\\')
 parser.add_argument('--training_dir', help='Directory to store normalized data for training', default='..\\data\\training\\')
 parser.add_argument('--validation_dir', help="Directory to store normalized data for validation", default='..\\data\\validation\\')
-parser.add_argument('--width',help='Width of target image size', default=128)
-parser.add_argument("--height", help="Height of target image size", default= 128)
 parser.add_argument("--validation_split", help="Decimal percentage of training and validation split", default=0.2)
 parser.add_argument("--num_images", help="Number of Images to download per bird", default=10)
 
@@ -66,7 +64,6 @@ for image_path in glob.glob(raw_dir + '*\\*.jpg'):
     try:
         image = Image.open(image_path)
         image = image.convert("RGB")
-        image = image.resize(target_size)
         image.save(image_path.replace(raw_dir, training_dir))
     except Exception as e:
         print(f"ERROR: ", image_path)

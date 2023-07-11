@@ -7,7 +7,7 @@ import argparse
 # %%
 # Necessary inputs
 # Argparse
-parser = argparse.ArgumentParser(description="")
+parser = argparse.ArgumentParser(description="File for scraping bird images from google images and processing them for machine learning.")
 parser.add_argument('ggl_api_key', help='Google API key that has "Custom Search API" enabled')
 parser.add_argument('--search_engine_id', help='Programmable Google Search Engine ID with "Image Search", "Safe Search", and "Search the Entire Web" enabled.',default='f1aca5d66c8d4435c')
 parser.add_argument('--birds_txt', help='TXT file input containing the new line delimited list of birds', default='..\\data\\bird_lists\\birds.txt')
@@ -20,13 +20,14 @@ parser.add_argument("--num_images", help="Number of Images to download per bird"
 args = parser.parse_args()
 config = vars(args)
 
-search_engine_id = config['ggl_api_key']
-ggl_api_key = config['search_engine_id']
+search_engine_id = config['search_engine_id']
+ggl_api_key = config['ggl_api_key']
 raw_dir = config['raw_dir']
 training_dir = config['training_dir']
 validation_dir = config['validation_dir']
-validation_split = config['validation_split'] # Takes 1/5 of the images for validation
+validation_split = float(config['validation_split']) # Takes 1/5 of the images for validation
 birds_txt = config['birds_txt']
+num_images = int(config['num_images'])
 
 # %%
 # Read-in txt file of bird names
@@ -53,7 +54,7 @@ for bird in birds:
 for bird in birds:
     search_query = '"' + bird + '"' + " bird"
     save_dir = raw_dir + '\\'+bird+'\\'
-    ggl_img_scraper.google_image_download(search_query, save_dir, ggl_api_key, search_engine_id, n = num_images)
+    ggl_img_scraper.google_image_download(search_query, save_dir, ggl_api_key, search_engine_id, n = num_images, name = bird)
 
 # %%
 # Resize Images/ Normalize Every Image to RGB

@@ -1,6 +1,25 @@
 import os, time, requests
 
-def google_image_download(query, save_directory, api_key, cx, n = 10, name = "image"):
+def google_image_download(query, save_directory, api_key, cx, n=10, name="image", delay=7):
+    """ Downloads the first n-number of images regarding a query to the given directory.
+        For this function to work, a google api key is required that has the Custom Search API enabled.
+            It also needs a Programmable Custom Search Engine ID that can access images.
+
+    Args:
+        query (str): Google Search Query to find images for
+        save_directory (str): Path to a directory to save the JPG images
+        api_key (str): API key that has Custom Search API enabled
+        cx (str): Programmable Custom Google Search Engine ID
+        n (int, optional): Number of images to be downloaded. Defaults to 10.
+        name (str, optional): Name of the queried images. Defaults to "image".
+        delay (int, optional): Requests per two seconds. Defaults to 7.
+    
+    Raises:
+        Exception: Raises an exception when a request cannot be made in 5 min
+        
+    Returns:
+        int : number of saved images
+    """  
     # Create the Google Custom Search API URL
     url = f"https://www.googleapis.com/customsearch/v1?searchType=image&key={api_key}&cx={cx}&q={query}"
 
@@ -10,6 +29,7 @@ def google_image_download(query, save_directory, api_key, cx, n = 10, name = "im
     }
 
     # Send a GET request to the API URL with the User-Agent header
+    error_count = 0
     while True:
         try:
             response = requests.get(url, headers=headers)
@@ -21,8 +41,9 @@ def google_image_download(query, save_directory, api_key, cx, n = 10, name = "im
                 # Handle rate limit exceeded error by waiting for a minute
                 print("Rate limit exceeded. Retrying in 1 minute...")
                 time.sleep(60)
-            else:
-                return  # Exit the function if an error occurs and cannot be resolved
+                error_count +=1
+            if error_count > 5:
+                raise Exception("Wait until midnight PST for your Google API requests quota to reset.")
 
     # Get the JSON response data
     json_data = response.json()
@@ -42,13 +63,13 @@ def google_image_download(query, save_directory, api_key, cx, n = 10, name = "im
             file_path = os.path.join(save_directory, f"{name}{saved_images+1}.jpg")
             with open(file_path, 'wb') as file:
                 file.write(response.content)
+            if (i + 1) % delay == 0: 
+                time.sleep(2)
             saved_images += 1
-            time.sleep(1)
         except requests.exceptions.RequestException as e:
-            print(f"Error: {str(e)}")
             if response.status_code == 429:
-                wait_time = 2 ** saved_images  # Exponential backoff
+                print(f"Error: {str(e)}")
+                wait_time = delay ** saved_images  # Exponential backoff
                 print(f"Rate limit exceeded. Retrying in {wait_time} seconds...")
                 time.sleep(wait_time)
-            else:
-                break
+    return saved_images

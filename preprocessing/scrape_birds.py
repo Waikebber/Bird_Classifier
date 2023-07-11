@@ -1,8 +1,8 @@
 # %%
-import os, string, time, glob, random, shutil
-import ggl_img_scraper
+import os, string, time, glob, random, shutil, argparse
+import ggl_img_scraper as ggl
 from PIL import Image
-import argparse
+from tqdm import tqdm
 
 # %%
 # Necessary inputs
@@ -51,13 +51,45 @@ for bird in birds:
 
 # %%
 # Get Images for each bird from Google Images
-for bird in birds:
+for bird in tqdm(birds):
     search_query = '"' + bird + '"' + " bird"
     save_dir = raw_dir + '\\'+bird+'\\'
-    ggl_img_scraper.google_image_download(search_query, save_dir, ggl_api_key, search_engine_id, n = num_images, name = bird)
+    saved = ggl.google_image_download(search_query, save_dir, ggl_api_key, search_engine_id, n = num_images, name = bird)
+    if saved != num_images:
+        print(bird + " saved " + saved + " not " + num_images)
+
+# %% 
+# Counts directories for correct number of images
+def count_jpg_images(folder_path, n):
+    """ Checks whether every subfolder within the given folder has n number of JPG files within it.
+        Raises an exception when a discrepancy is found.
+        
+    Args:
+        folder_path (str): Path to folder
+        n (int): number of JPGs to be found in each sub-directory
+
+    Raises:
+        Exception: Raised when the incorrect number of files are in some child directories 
+    """    
+    e = False
+    jpg_count = 0
+    for root, dirs, files in os.walk(folder_path):
+        if root == folder_path:
+            continue
+        for file in files:
+            if file.lower().endswith('.jpg'):
+                jpg_count += 1
+        folder_name = os.path.basename(root)
+        if jpg_count != n:
+            print( "Error: Folder: " + folder_name + " doen't have " + str(n) + " entries.\n\t" + str(jpg_count) + " entries were found instead.")
+            e = True
+        jpg_count = 0
+    if e:
+        raise Exception("Error: Incorrect number of files in some directories!")
+count_jpg_images(raw_dir, num_images)
 
 # %%
-# Resize Images/ Normalize Every Image to RGB
+# Normalize Every Image to RGB
 for image_path in glob.glob(raw_dir + '*\\*.jpg'):
     try:
         image = Image.open(image_path)
@@ -69,15 +101,15 @@ for image_path in glob.glob(raw_dir + '*\\*.jpg'):
 
 # %%
 # Make Training and Validation Split
-for im in glob.glob(training_dir + '*\\'):
+for bird in birds:
     val_imgs = []
     num = None
     while len(val_imgs) < int(num_images * validation_split):
         num = random.randint(1, num_images)
         if num not in val_imgs:
             val_imgs.append(num)
-            shutil.move(os.path.join(os.path.dirname(im), "image" + str(num) + '.jpg'),
-                        os.path.join(validation_dir, im.split('\\')[3], "image" + str(num) + '.jpg'))
+            shutil.move(os.path.join(training_dir,bird, bird + str(num) + '.jpg'),
+                        os.path.join(validation_dir, bird, bird + str(num) + '.jpg'))
         
 
 

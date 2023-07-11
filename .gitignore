@@ -169,5 +169,9 @@ data/bird_lists/*
 !data/validation/.gitkeep
 !data/bird_lists/.gitkeep
 
+# results
+results/*
+!results/.gitkeep
+
 # DO NOT SHARE KEY
 KEY.txt

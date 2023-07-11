@@ -9,7 +9,7 @@ import argparse
 # Argparse
 parser = argparse.ArgumentParser(description="")
 parser.add_argument('ggl_api_key', help='Google API key that has "Custom Search API" enabled')
-parser.add_argument('search_engine_id', help='Programmable Google Search Engine ID with "Image Search", "Safe Search", and "Search the Entire Web" enabled.',default='f1aca5d66c8d4435c')
+parser.add_argument('--search_engine_id', help='Programmable Google Search Engine ID with "Image Search", "Safe Search", and "Search the Entire Web" enabled.',default='f1aca5d66c8d4435c')
 parser.add_argument('--birds_txt', help='TXT file input containing the new line delimited list of birds', default='..\\data\\bird_lists\\birds.txt')
 parser.add_argument('--raw_dir', help="Directory to store raw data",default='..\\data\\raw\\')
 parser.add_argument('--training_dir', help='Directory to store normalized data for training', default='..\\data\\training\\')
@@ -20,15 +20,12 @@ parser.add_argument("--num_images", help="Number of Images to download per bird"
 args = parser.parse_args()
 config = vars(args)
 
-#'AIzaSyDOsnZpaFSzLWdIenRayGIUFGAbd3w1RqY'
 search_engine_id = config['ggl_api_key']
 ggl_api_key = config['search_engine_id']
 raw_dir = config['raw_dir']
 training_dir = config['training_dir']
 validation_dir = config['validation_dir']
-target_size = (config['width'], config['height'])
 validation_split = config['validation_split'] # Takes 1/5 of the images for validation
-num_images = config['num_images']
 birds_txt = config['birds_txt']
 
 # %%

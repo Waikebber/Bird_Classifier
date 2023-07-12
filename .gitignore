@@ -163,11 +163,9 @@ cython_debug/
 data/raw/*
 data/training/*
 data/validation/*
-data/bird_lists/*
 !data/raw/.gitkeep
 !data/training/.gitkeep
 !data/validation/.gitkeep
-!data/bird_lists/.gitkeep
 
 # results
 results/*

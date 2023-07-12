@@ -105,11 +105,10 @@ class URLDatabase():
 
         # Check for duplicate URLs before inserting
         for url in urls:
-            self.cursor.execute('SELECT id FROM urls WHERE url = ? AND tag_id = ?', (url, tag_id))
-            existing_url = self.cursor.fetchone()
-            if not existing_url:
+            try:
                 self.cursor.execute('INSERT INTO urls (url, tag_id) VALUES (?, ?)', (url, tag_id))
-
+            except sqlite3.IntegrityError:
+                print(f"Skipping duplicate URL: {url}")
         self.close()
     
     def check_tag_exists(self, name):

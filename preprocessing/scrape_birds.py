@@ -16,6 +16,7 @@ parser.add_argument('--training_dir', help='Directory to store normalized data f
 parser.add_argument('--validation_dir', help="Directory to store normalized data for validation", default='..\\data\\validation\\')
 parser.add_argument("--validation_split", help="Decimal percentage of training and validation split", default=0.2)
 parser.add_argument("--num_images", help="Number of Images to download per bird", default=10)
+parser.add_argument("--db_name", help=" Database path to stored saved image urls", default=".\\bird_im_urls.db")
 
 args = parser.parse_args()
 config = vars(args)
@@ -28,6 +29,7 @@ validation_dir = config['validation_dir']
 validation_split = float(config['validation_split']) # Takes 1/5 of the images for validation
 birds_txt = config['birds_txt']
 num_images = int(config['num_images'])
+db_name = config['db_name']
 
 # %%
 # Read-in txt file of bird names
@@ -54,7 +56,7 @@ for bird in birds:
 for bird in tqdm(birds):
     search_query = '"' + bird + '"' + " bird"
     save_dir = raw_dir + '\\'+bird+'\\'
-    saved = ggl.google_image_download(search_query, save_dir, ggl_api_key, search_engine_id, n = num_images, name = bird)
+    saved = ggl.google_image_download(search_query, save_dir, ggl_api_key, search_engine_id, n = num_images, name = bird, db_name = db_name)
     if saved != num_images:
         print(bird + " saved " + saved + " not " + num_images)
 

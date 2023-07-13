@@ -1,0 +1,13 @@
+name: birds
+channels:
+  - defaults
+dependencies:
+  - python=3.9
+  - pip
+  - pip:
+    - tensorflow==2.11
+    - scikit-learn
+    - matplotlib
+    - segmentation-models
+    - pillow
+    - tqdm

@@ -18,14 +18,15 @@ def clear_dir(folder_path,keep_files):
                 clear_dir(file_path, keep_files)
                 os.rmdir(file_path)
 
-def count_jpg_images(folder_path, n, raise_e = False):
+def count_jpg_images(folder_path, n, buffer = 5,raise_e = False):
     """ Checks whether every subfolder within the given folder has n number of JPG files within it.
         Raises an exception when a discrepancy is found and given boolean is True.
         
     Args:
         folder_path (str): Path to folder
         n (int): number of JPGs to be found in each sub-directory
-        raise_e (bool): True when an expection should be raised
+        raise_e (bool, optional): True when an expection should be raised. Defaults as True
+        buffer (int, optional): Doesn't count an error in the count within the buffer. Defaults as 5.
 
     Raises:
         Exception: Raised when the incorrect number of files are in some child directories 
@@ -39,7 +40,7 @@ def count_jpg_images(folder_path, n, raise_e = False):
             if file.lower().endswith('.jpg'):
                 jpg_count += 1
         folder_name = os.path.basename(root)
-        if jpg_count != n:
+        if jpg_count < (n- buffer):
             print( "Error: Folder: " + folder_name + " doen't have " + str(n) + " entries.\n\t" + str(jpg_count) + " entries were found instead.")
             e = True
         jpg_count = 0

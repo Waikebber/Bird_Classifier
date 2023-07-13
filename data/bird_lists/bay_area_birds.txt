@@ -2,7 +2,7 @@ WESTERN BLUEBIRD
 PINE SISKIN
 AMERICAN CROW
 BROWN-HEADED COWBIRD
-BUSHTIT
+American BUSHTIT
 AMERICAN ROBIN
 CALIFORNIA SCRUB-JAY
 CEDAR WAXWING
@@ -26,7 +26,7 @@ Mallard
 California Quail
 Wild Turkey
 Pied-billed Grebe
-Double-cresetd Cormorant
+Double-crested Cormorant
 Brown Pelican
 Great Egret
 Snowy Egret 

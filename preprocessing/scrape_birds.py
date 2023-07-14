@@ -1,8 +1,28 @@
 # %%
-import os, string, time, glob, random, shutil, argparse
+import os, string, argparse
 import ggl_img_scraper as ggl
 from PIL import Image
 from tqdm import tqdm
+from utils import *
+
+"""
+################################
+This file creates the basis for a proper file directory for a dataset to train the UNET in the super directory.
+To create the basis for the dataset, it creates a raw, training, and validation directory with sub-folders in each of them for the classes.
+The Classes are given from a txt file that is new-line delimited.
+The script then scrapes Google Images for images regarding the classes and saves them to the raw directory in their respective class folders.
+When scraped, image urls are stored in a database for later use.
+
+The file is currently configured to search for birds; however, this can be changed by changing the search query in "line 94"
+!! This file may take several hours to run !!
+
+###############################
+!!! AFTER RUNNING THIS FILE: !!!!
+Manualy remove bad data from the raw image directory. 
+After clearing out bad data run the 'dataset_from_raw.py' file to convert images to RGB format.
+The 'dataset_from_raw.py' file also moves files into the training dir and validation dir according to the validation split.
+################################
+"""
 
 # %%
 # Necessary inputs
@@ -14,9 +34,11 @@ parser.add_argument('--birds_txt', help='TXT file input containing the new line 
 parser.add_argument('--raw_dir', help="Directory to store raw data",default='..\\data\\raw\\')
 parser.add_argument('--training_dir', help='Directory to store normalized data for training', default='..\\data\\training\\')
 parser.add_argument('--validation_dir', help="Directory to store normalized data for validation", default='..\\data\\validation\\')
-parser.add_argument("--validation_split", help="Decimal percentage of training and validation split", default=0.2)
 parser.add_argument("--num_images", help="Number of Images to download per bird", default=10)
-parser.add_argument("--db_name", help=" Database path to stored saved image urls", default=".\\bird_im_urls.db")
+parser.add_argument("--db_name", help="Database path to stored saved image urls", default=".\\bird_im_urls.db")
+parser.add_argument("--buffer", help="Integer number that allows for error in the number of images saved", default=5)
+parser.add_argument("--clear_dirs", help="True when raw_dir, training_dir, and validation_dir are to be cleared before saving images", default=True)
+parser.add_argument("--remove_db", help="True when the Database is to be removed before running", default=True)
 
 args = parser.parse_args()
 config = vars(args)
@@ -30,7 +52,21 @@ validation_split = float(config['validation_split']) # Takes 1/5 of the images f
 birds_txt = config['birds_txt']
 num_images = int(config['num_images'])
 db_name = config['db_name']
+buffer = int(config['buffer'])
+clear_dirs = bool(config['clear_dirs'])
+remove_db = bool(config['remove_db'])
 
+# %% 
+## Clear dir
+if clear_dirs:
+    clear_dir(raw_dir, [])
+    clear_dir(training_dir, [])
+    clear_dir(validation_dir, [])
+if remove_db and os.path.exists(db_name):
+    os.remove(db_name)
+    if os.path.exists(db_name+"-journal"):
+        os.remove(db_name+"-journal")
+        
 # %%
 # Read-in txt file of bird names
 # File must be new-line delimited
@@ -40,6 +76,7 @@ with open(birds_txt) as f:
         raise FileNotFoundError("ERROR: File is not a readable file.")
     birds = f.readlines()
 birds = [ string.capwords(x.strip()) for x in birds]
+birds.sort()
 
 # %%
 # Make a directory for every bird in the list in the training and validation directories
@@ -53,65 +90,26 @@ for bird in birds:
 
 # %%
 # Get Images for each bird from Google Images
+retry_lst = {}
 for bird in tqdm(birds):
-    search_query = '"' + bird + '"' + " bird"
+    search_query = f"real '{str(bird).strip()}' bird -drawing -map -cartoon -logo -baby -egg -painting -pattern -illustration -art -similar -information -creative -general -book -math -product -food -feed -help -zoologist -list -bingo -tattoo -ranch -cowboy"
     save_dir = raw_dir + '\\'+bird+'\\'
-    saved = ggl.google_image_download(search_query, save_dir, ggl_api_key, search_engine_id, n = num_images, name = bird, db_name = db_name)
-    if saved != num_images:
-        print(bird + " saved " + saved + " not " + num_images)
+    saved = ggl.google_image_download(query=search_query, save_directory=save_dir, api_key=ggl_api_key, cx=search_engine_id, n=num_images, name=bird, db_name=db_name,delay=None, mute=True)
+    if (len(saved)+buffer)  < num_images:
+        retry_lst[bird] = saved
 
 # %% 
 # Counts directories for correct number of images
-def count_jpg_images(folder_path, n):
-    """ Checks whether every subfolder within the given folder has n number of JPG files within it.
-        Raises an exception when a discrepancy is found.
-        
-    Args:
-        folder_path (str): Path to folder
-        n (int): number of JPGs to be found in each sub-directory
-
-    Raises:
-        Exception: Raised when the incorrect number of files are in some child directories 
-    """    
-    e = False
-    jpg_count = 0
-    for root, dirs, files in os.walk(folder_path):
-        if root == folder_path:
-            continue
-        for file in files:
-            if file.lower().endswith('.jpg'):
-                jpg_count += 1
-        folder_name = os.path.basename(root)
-        if jpg_count != n:
-            print( "Error: Folder: " + folder_name + " doen't have " + str(n) + " entries.\n\t" + str(jpg_count) + " entries were found instead.")
-            e = True
-        jpg_count = 0
-    if e:
-        raise Exception("Error: Incorrect number of files in some directories!")
-count_jpg_images(raw_dir, num_images)
+count_jpg_images(raw_dir, num_images, buffer = buffer,raise_e = False)
+print(len(retry_lst))
+print(retry_lst)
 
 # %%
-# Normalize Every Image to RGB
-for image_path in glob.glob(raw_dir + '*\\*.jpg'):
-    try:
-        image = Image.open(image_path)
-        image = image.convert("RGB")
-        image.save(image_path.replace(raw_dir, training_dir))
-    except Exception as e:
-        print(f"ERROR: ", image_path)
-        print(e)
-
-# %%
-# Make Training and Validation Split
-for bird in birds:
-    val_imgs = []
-    num = None
-    while len(val_imgs) < int(num_images * validation_split):
-        num = random.randint(1, num_images)
-        if num not in val_imgs:
-            val_imgs.append(num)
-            shutil.move(os.path.join(training_dir,bird, bird + str(num) + '.jpg'),
-                        os.path.join(validation_dir, bird, bird + str(num) + '.jpg'))
-        
-
-
+# Retry getting images for brids in the list with a slightly different query
+for bird in tqdm(retry_lst.keys()):
+    search_query = str(bird)
+    save_dir = raw_dir + '\\'+str(bird)+'\\'
+    saved = ggl.google_image_download(query=search_query, save_directory=save_dir, api_key=ggl_api_key, cx=search_engine_id, n=num_images, name=bird, db_name=db_name,delay=None, exclude_urls=retry_lst[bird])
+    if (len(saved)+buffer) < num_images:
+        print(saved)
+        print(bird + " saved " + str(len(saved)) + " not " + str(num_images))

@@ -67,11 +67,12 @@ def move_random_files(source_dir, destination_dir, num_files):
         destination_file = os.path.join(destination_dir, file_name)
         shutil.move(source_file, destination_file)
 
-def confirm_image_readability(directory, bands=3):
+def confirm_image_readability(directory, save_dir=None, bands=3):
     """Converts images in a directory's sub-directories to RGB.
     
     Args:
         directory (str): Directory path to convert
+        save_dir (str, optional): Directory path to save converted images
         bands (int, optional): Number of Channels to convert to. Defaults to 3.
     """    
     for category in os.listdir(directory):
@@ -86,5 +87,9 @@ def confirm_image_readability(directory, bands=3):
                     print(f"Image has incorrect number of color channels: {image_path}")
                 # Check if the image can be successfully loaded and interpreted
                 image_rgb.load()
+                if save_dir is not None:
+                    if not os.path.exists(os.path.join(save_dir, category)):
+                        os.makedirs(os.path.join(save_dir, category))
+                    shutil.copy2(image_path,os.path.join(save_dir, category))
             except Exception as e:
                 print(f"Error reading image: {image_path}")

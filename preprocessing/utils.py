@@ -1,4 +1,6 @@
-import os
+import os, random, shutil
+from tensorflow import keras
+from PIL import Image
 
 def clear_dir(folder_path,keep_files):
     """Removes all files/folders in the given directory that are not in the given list.
@@ -46,3 +48,43 @@ def count_jpg_images(folder_path, n, buffer = 5,raise_e = False):
         jpg_count = 0
     if e and raise_e:
         raise Exception("Error: Incorrect number of files in some directories!")
+    
+def move_random_files(source_dir, destination_dir, num_files):
+    """ Moves n-number of files from the source directory to the target directory.
+        The files moved are random
+    Args:
+        source_dir (str): source directory to move files from 
+        destination_dir (str): target directory to move files to
+        num_files (int): number of files to move
+    """    
+    files = os.listdir(source_dir)
+    random.shuffle(files)
+    num_files = min(num_files, len(files))
+    selected_files = files[:num_files]
+    
+    for file_name in selected_files:
+        source_file = os.path.join(source_dir, file_name)
+        destination_file = os.path.join(destination_dir, file_name)
+        shutil.move(source_file, destination_file)
+
+def confirm_image_readability(directory, bands=3):
+    """Converts images in a directory's sub-directories to RGB.
+    
+    Args:
+        directory (str): Directory path to convert
+        bands (int, optional): Number of Channels to convert to. Defaults to 3.
+    """    
+    for category in os.listdir(directory):
+        category_dir = os.path.join(directory, category)
+        for image_name in os.listdir(category_dir):
+            image_path = os.path.join(category_dir, image_name)
+            try:
+                image = Image.open(image_path)
+                image_rgb = image.convert("RGB")
+                # Check if the number of color channels is 3 (RGB)
+                if len(image_rgb.getbands()) != bands:
+                    print(f"Image has incorrect number of color channels: {image_path}")
+                # Check if the image can be successfully loaded and interpreted
+                image_rgb.load()
+            except Exception as e:
+                print(f"Error reading image: {image_path}")

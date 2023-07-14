@@ -1,12 +1,21 @@
 import os, time, requests
 from bird_db import URLDatabase
+from urllib.parse import urlparse
 
 # Set the User-Agent header
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 Safari/537.36'
 }
 
-def google_image_urls(query, api_key, cx, num_images, exclude_urls=None):
+VALID_EXTENSIONS = ['.jpg', '.jpeg', '.png']
+
+def is_valid_extension(url):
+    """Check if the URL has a valid image file extension."""
+    parsed_url = urlparse(url)
+    path = parsed_url.path.lower()
+    return any(path.endswith(ext) for ext in VALID_EXTENSIONS)
+
+def google_image_urls(query, api_key, cx, num_images, exclude_urls=[]):
     """ Returns a list of URLs of images relating to the query, excluding specified URLs.
         For this function to work, a Google API key is required that has the Custom Search API enabled.
         It also needs a Programmable Custom Search Engine ID that can access images.
@@ -16,7 +25,7 @@ def google_image_urls(query, api_key, cx, num_images, exclude_urls=None):
         api_key (str): API key that has Custom Search API enabled.
         cx (str): Programmable Custom Google Search Engine ID.
         num_images (int): Number of images to retrieve.
-        exclude_urls (list, optional): List of URLs to exclude from the results. Defaults to None.
+        exclude_urls (list, optional): List of URLs to exclude from the results. Defaults to [].
 
     Raises:
         Exception: Raises an exception when a request cannot be made in 5 minutes.
@@ -47,13 +56,13 @@ def google_image_urls(query, api_key, cx, num_images, exclude_urls=None):
         # Get the JSON response data and extract the image URLs
         json_data = response.json()
         items = json_data.get('items', [])
-        new_urls = [item['link'] for item in items if item['link'] not in (exclude_urls or [])]
+        new_urls = [item['link'] for item in items if is_valid_extension(item['link']) and item['link'] not in exclude_urls]
         image_urls += new_urls
         if 'nextPage' not in json_data['queries']:
             break  # Exit the loop if there are no more pages
     return image_urls[:num_images]
 
-def download_urls(image_urls, save_directory, n=10, name = "image",delay=None, exclude_urls = None):
+def download_urls(image_urls, save_directory, n=10, name = "image",delay=None, exclude_urls = []):
     """ Downloads the first n-number of images in the url list to the given directory.
     
         SAVE FORMAT:
@@ -63,7 +72,7 @@ def download_urls(image_urls, save_directory, n=10, name = "image",delay=None, e
         image_urls (lst) : A list of image URLs from a Google request
         save_directory (str): Path to a directory to save the JPG images
         n (int, optional): Number of images to be downloaded. Defaults to 10.
-        delay (int, optional): Requests per two seconds. Defaults to None.
+        delay (int, optional): Requests per two seconds. Defaults to [].
         
     Returns:
         int : number of saved images
@@ -75,6 +84,8 @@ def download_urls(image_urls, save_directory, n=10, name = "image",delay=None, e
         if len(saved_images) >= n:
             break
         if image_url in exclude_urls:
+            continue
+        if not is_valid_extension(image_url):
             continue
         try:
             response = requests.get(image_url, headers=HEADERS)
@@ -97,7 +108,7 @@ def download_urls(image_urls, save_directory, n=10, name = "image",delay=None, e
                     raise Exception("ERROR WITH REQUEST")
     return saved_images
 
-def google_image_download(query, save_directory, api_key, cx, n=10, name="image", delay=None, db_name = ".\\bird_im_urls.db", exclude_urls = None):
+def google_image_download(query, save_directory, api_key, cx, n=10, name="image", delay=None, db_name = ".\\bird_im_urls.db", exclude_urls = [], mute = False):
     """ Downloads n-number of images to the given directory. Images are sourced from a goolge image query.
             Images are saved with the given name.
             After finding the urls, they are stored in the given database. This database can then be used to source the urls instead.
@@ -114,7 +125,8 @@ def google_image_download(query, save_directory, api_key, cx, n=10, name="image"
         name (str, optional): Name of the queried images. Defaults to "image".
         delay (int, optional): Requests per two seconds. Defaults to None.
         db_name (str, optional): Database path to store saved image urls. Defaults to ".\\bird_im_urls.db".
-        exclude_urls (list, optional): List of URLs to exclude from the results. Defaults to None.
+        exclude_urls (list, optional): List of URLs to exclude from the results. Defaults to [].
+        mute (bool, optional): Stops print statements stating what file was skipped. Defaults to False
     Returns:
         lst: list of the saved images
     """ 
@@ -126,5 +138,5 @@ def google_image_download(query, save_directory, api_key, cx, n=10, name="image"
         image_urls = image_urls + google_image_urls(query, api_key, cx,n-len(image_urls), exclude_urls=image_urls+exclude_urls)
     saved_urls = download_urls(image_urls, save_directory, n, name=name, delay=delay,exclude_urls=exclude_urls)
     if name != "image":
-        db.add_urls_by_name(name, saved_urls)
+        db.add_urls_by_name(name, saved_urls,mute)
     return saved_urls

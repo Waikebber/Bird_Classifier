@@ -81,7 +81,7 @@ class URLDatabase():
 
         return [url[0] for url in urls]
     
-    def add_urls_by_name(self, name, urls):
+    def add_urls_by_name(self, name, urls, mute = False):
         """Adds a list of new URLs to the table with name.
                 Doesn't add duplicates.
                 Creates a tag for the name if it doesn't exist already
@@ -89,6 +89,7 @@ class URLDatabase():
         Args:
             name (str): Name of the tag for the urls
             urls (lst): List of the urls related to the name to be added
+            mute (bool, optional): Stops printing skipping file when True. Defaults to False.
         """        
         self.connect()
 
@@ -108,7 +109,8 @@ class URLDatabase():
             try:
                 self.cursor.execute('INSERT INTO urls (url, tag_id) VALUES (?, ?)', (url, tag_id))
             except sqlite3.IntegrityError:
-                print(f"Skipping duplicate URL: {url}")
+                if not mute:
+                    print(f"Skipping duplicate URL: {url}")
         self.close()
     
     def check_tag_exists(self, name):

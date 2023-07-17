@@ -163,13 +163,18 @@ cython_debug/
 data/raw/*
 data/training/*
 data/validation/*
+data/projects/*
 !data/raw/.gitkeep
 !data/training/.gitkeep
 !data/validation/.gitkeep
+!data/projects/.gitkeep
 
 # results
 results/*
 !results/.gitkeep
+
+# databases
+*.db
 
 # DO NOT SHARE KEY
 KEY.txt

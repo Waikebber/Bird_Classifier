@@ -1,29 +1,31 @@
-import labelbox as lb
-import datetime, os
+import os
 from tqdm import tqdm
+import labelbox as lb
 from labelbox import Project, Dataset
 from labelbox.exceptions import InvalidAttributeError
-
 class LabelBox:
     def __init__(self, api_key, directory_path=".\\..\\data\\raw\\", project_name="Birds", ontology_name ="Birds"):
         self.api_key = api_key
         self.directory_path = directory_path
+        self.ontology =None
         client = lb.Client(api_key=self.api_key)
         self.project = client.create_project(name=project_name,media_type=lb.MediaType.Image,queue_mode='BATCH')
-        self.labelbox_proj(ontology_name)
+        errors = self.labelbox_proj(ontology_name)
+        for error in errors:
+            print(f'ERROR UPLOADING DATASET: {error}')
         
     def labelbox_proj(self, ontology_name):
-        """Creates the Project in LabelBox with a dataset for every class.
-            The Project also makes an ontology with each class.
+        """Creates LabelBox datasets for every class in the Project.
+            Also makes an ontology with each class for the Project.
 
         Returns:
-            labelbox.Project: Project object specific to the directory
+            lst: List of datasets that had an error being created
         """
         subfolders = [subfolder for subfolder in os.listdir(self.directory_path) if os.path.isdir(os.path.join(self.directory_path, subfolder))]
         for subfolder in tqdm(subfolders):
             self.labelbox_dataset(os.path.join(self.directory_path,subfolder),subfolder)
         errors = self.find_error_sets()
-        self.make_ontology(ontology_name)
+        self.ontology = self.make_ontology(ontology_name)
         return errors
     
     def make_ontology(self,ontology_name):
@@ -40,7 +42,7 @@ class LabelBox:
         ontology = client.create_ontology(ontology_name,
                                     ontology_builder.asdict())
         self.project.setup_editor(ontology)
-        return ontology
+        return ontology.uid
     
     def labelbox_dataset(self, directory,dataset_name, retry=0):
         """Creates a dataset in labelbox from all the files in a given dataset. 
@@ -53,8 +55,6 @@ class LabelBox:
         client = lb.Client(api_key=self.api_key)
         dataset = client.create_dataset(name=dataset_name)
         local_file_paths = [ os.path.join(directory ,x) for x in os.listdir(os.path.join(directory))]
-        # local_file_paths = [ { 'row_data': os.path.join(directory ,x), "global_key": x.split('\\')[-1].split('/')[-1] } 
-        #                     for x in os.listdir(os.path.join(directory)) ]
         try:
             task = dataset.create_data_rows(local_file_paths)
             task.wait_till_done()
@@ -64,11 +64,9 @@ class LabelBox:
                 dataset.delete()
                 retry +=1
                 self.labelbox_dataset(directory, dataset_name, retry)
-            else:
-                print(f'Error while creating labelbox dataset: {dataset_name}\n\tError: {err}')
 
     
-    def labelbox_dataset_lst(self, dataset_name, data_lst, rm=True):
+    def labelbox_dataset_lst(self, dataset_name, data_lst):
         """ Add the files in the list of data to the dataset one at a time.
             Dataset is a str name, not actual labelbox Dataset
             Use function for finding bad data. Its slow.
@@ -76,8 +74,6 @@ class LabelBox:
         Args:
             directory (str): Name of dataset to be appended to
             data_lst (lst): lst of file paths to be uploaded
-            rm (bool, optional): True if filepaths that don't upload are to be deleted. 
-                                Defaults to True.
 
         Raises:
             Exception: When there is an issue uploading a file
@@ -88,9 +84,10 @@ class LabelBox:
         client = lb.Client(api_key=self.api_key)
         dataset = None
         try:
-            dataset = client.get_datasets(where=(Dataset.name == dataset_name))
+            datasets = client.get_datasets(where=(Dataset.name == dataset_name.replace("'", '-')))
+            dataset = next(datasets)
         except Exception:
-            raise Exception(f"Could not find {lst_entry} in datasets.")
+            raise Exception(f"Could not find {dataset_name} in datasets.")
         error_files = []
         for data in data_lst:
             try:
@@ -98,12 +95,8 @@ class LabelBox:
                 task.wait_till_done()
             except Exception:
                 error_files.append(data)
-                print(f'FILE ERROR: {data} could not be uploaded.')
                 if not os.path.exists(data):
                     print(f'FileNotFound: {data}')
-                if rm and os.path.exists(data):
-                    print(f'File: {data} will be removed from.')
-                    os.remove(data)
         self.labelbox_batch(dataset_name,dataset)
         return error_files
                 
@@ -158,12 +151,13 @@ class LabelBox:
         """
         self.project.delete()
     
-def remove_all(api_key):
+def remove_all(api_key, ontology_name = ""):
     """Deletes all Projects/Datasets/Ontologies the user can access.
     !!! DO NOT RUN UNLESS YOU ARE SURE YOU WANT TO DELETE EVERYTHING
 
     Args:
         api_key (str): LabelBox API key
+        ontology_name (str, optional): String to be contained in deleted ontologies
     """    
     client = lb.Client(api_key=api_key)
     all_projects = client.get_projects()
@@ -173,3 +167,5 @@ def remove_all(api_key):
     
     for data in all_datasets:
         data.delete()
+    for ont in client.get_ontologies(ontology_name):
+        client.delete_unused_ontology(str(ont.uid))

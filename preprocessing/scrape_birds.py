@@ -92,7 +92,7 @@ for bird in birds:
 # Get Images for each bird from Google Images
 retry_lst = {}
 for bird in tqdm(birds):
-    search_query = f"real '{str(bird).strip()}' bird -drawing -map -cartoon -logo -baby -egg -painting -pattern -illustration -art -similar -information -creative -general -book -math -product -food -feed -help -zoologist -list -bingo -tattoo -ranch -cowboy"
+    search_query = f"real '{str(bird).strip()}' bird -drawing -map -cartoon -logo -baby -egg -painting -pattern -illustration -art -similar -information -creative -general -book -math -product -food -feed -help -zoologist -list -bingo -tattoo -ranch -cowboy -nest -jewelry -necklace -sports"
     save_dir = raw_dir + '\\'+bird+'\\'
     saved = ggl.google_image_download(query=search_query, save_directory=save_dir, api_key=ggl_api_key, cx=search_engine_id, n=num_images, name=bird, db_name=db_name,delay=None, mute=True)
     if (len(saved)+buffer)  < num_images:
@@ -109,7 +109,7 @@ print(retry_lst)
 for bird in tqdm(retry_lst.keys()):
     search_query = str(bird)
     save_dir = raw_dir + '\\'+str(bird)+'\\'
-    saved = ggl.google_image_download(query=search_query, save_directory=save_dir, api_key=ggl_api_key, cx=search_engine_id, n=num_images, name=bird, db_name=db_name,delay=None, exclude_urls=retry_lst[bird])
-    if (len(saved)+buffer) < num_images:
+    saved = ggl.google_image_download(query=search_query, save_directory=save_dir, api_key=ggl_api_key, cx=search_engine_id, n=num_images-retry_lst[bird], name=bird, db_name=db_name,delay=None, exclude_urls=retry_lst[bird])
+    if (len(saved)+retry_lst[bird]+buffer) < num_images:
         print(saved)
-        print(bird + " saved " + str(len(saved)) + " not " + str(num_images))
+        print(bird + " saved " + str(len(saved)+retry_lst[bird]) + " not " + str(num_images))

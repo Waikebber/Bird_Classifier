@@ -160,11 +160,9 @@ cython_debug/
 #.idea/
 
 # data folders
-data/raw/*
-data/training/*
-data/validation/*
-data/projects/*
-data/datasets/*
+data/projects/
+data/datasets/*/
+
 !data/datasets/.gitkeep
 !data/projects/.gitkeep
 

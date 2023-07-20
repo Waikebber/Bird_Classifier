@@ -1,18 +1,34 @@
-import os
+import os, json,requests 
+from utils import convert_json_to_ndjson
 from tqdm import tqdm
 import labelbox as lb
 from labelbox import Project, Dataset
 from labelbox.exceptions import InvalidAttributeError
 class LabelBox:
-    def __init__(self, api_key, directory_path=".\\..\\data\\raw\\", project_name="Birds", ontology_name ="Birds"):
+    def __init__(self, api_key, directory_path=None, project_name=None, ontology_name =None, proj_id = None):
         self.api_key = api_key
         self.directory_path = directory_path
         self.ontology =None
         client = lb.Client(api_key=self.api_key)
-        self.project = client.create_project(name=project_name,media_type=lb.MediaType.Image,queue_mode='BATCH')
-        errors = self.labelbox_proj(ontology_name)
-        for error in errors:
-            print(f'ERROR UPLOADING DATASET: {error}')
+        if proj_id is None:
+            self.project = client.create_project(name=project_name,media_type=lb.MediaType.Image,queue_mode='BATCH')
+            errors = self.labelbox_proj(ontology_name)
+            for error in errors:
+                print(f'ERROR UPLOADING DATASET: {error}')
+        else:
+            self.project = client.get_project(proj_id)
+            
+    def labelbox_export_labels(self, file_path):
+        """Exports labelBox labels from the Project that are marked as done and saves them as a NDJSON file
+
+        Args:
+            file_path (str): NDJSON file path for label data to be saved in
+        """        
+        labels = self.project.export_labels()
+        response = requests.get(labels)
+        with open(file_path, "wb") as f:
+            f.write(response.content)
+        convert_json_to_ndjson(file_path,file_path)
         
     def labelbox_proj(self, ontology_name):
         """Creates LabelBox datasets for every class in the Project.
@@ -64,7 +80,6 @@ class LabelBox:
                 dataset.delete()
                 retry +=1
                 self.labelbox_dataset(directory, dataset_name, retry)
-
     
     def labelbox_dataset_lst(self, dataset_name, data_lst):
         """ Add the files in the list of data to the dataset one at a time.
@@ -134,7 +149,20 @@ class LabelBox:
         except InvalidAttributeError:
             print("No Projects connected to Datasets.")
         return error_lst
+    
+    def get_data_row_width_height(self, data_row_id):
+        """ Returns the width and height of the given data row image
 
+        Args:
+            data_row_id (str): LabelBox Data row id
+
+        Returns:
+            lst: [ image width, image height ]
+        """        
+        client = lb.Client(api_key=self.api_key)
+        data_row = client.get_data_row(data_row_id)
+        return data_row.media_attributes['width'], data_row.media_attributes['height'] 
+    
     def remove_datasets(self):
         """Removes all datasets in the project
         """      
@@ -150,6 +178,42 @@ class LabelBox:
         """Deletes the project from labelbox
         """
         self.project.delete()
+    
+    def ndjson_get_bounds(self, file_path, from_api=True):
+        """Given an ndjson exported from LabelBox, creates a dictionary containing the image name and its related bounding boxes
+            !!! from_api should be FALSE if NDJSON was downloaded directly from the LabelBox Website with everything selected
+            
+        Args:
+            file_path (str): Path to ndjson file
+            from_api (bool, optional): True when NDJSON was created using the LabelBox API. Defaults to True.
+        Returns:
+            dict: A dictionary containing the image width, height, row id, and a List of dictionaries representing the bounding boxes. 
+                    Each dict is a bounding box with the atributes 'top', 'left', 'height', and 'width'
+        """        
+        data_list = {}
+        with open(file_path, 'r') as file:
+            if from_api:
+                client = lb.Client(api_key=self.api_key)
+                for line in tqdm(file):
+                    try:
+                        data = json.loads(line.strip())
+                        data_list[data['External ID'].split('/')[-1].split('\\')[-1]] = {'bbox': [data["Label"]['objects'][x]['bbox'] for x in range(len(data["Label"]['objects']))],
+                                                                                         'width': client.get_data_row(data['DataRow ID']).media_attributes['width'],
+                                                                                         'height':client.get_data_row(data['DataRow ID']).media_attributes['height'],
+                                                                                         'row_id': data['DataRow ID'] }
+                    except json.JSONDecodeError:
+                        print(f"Error decoding JSON: {line}")
+            else:
+                for line in tqdm(file):
+                    try:
+                        data = json.loads(line.strip())
+                        data_list[data['data_row']['external_id'].split('/')[-1].split('\\')[-1]] = {'bbox': [data['projects'][key]['labels'][0]['annotations']['objects'][x]['bounding_box'] for key in data['projects'].keys() for x in range(len(data['projects'][key]['labels'][0]['annotations']['objects']))],
+                                                                                                    'width':data['media_attributes']['width'],
+                                                                                                    'height':data['media_attributes']['height'],
+                                                                                                    'row_id': data['data_row']['external_id']}
+                    except json.JSONDecodeError:
+                        print(f"Error decoding JSON: {line}")
+        return data_list
     
 def remove_all(api_key, ontology_name = ""):
     """Deletes all Projects/Datasets/Ontologies the user can access.

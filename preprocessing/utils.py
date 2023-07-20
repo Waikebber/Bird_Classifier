@@ -1,6 +1,7 @@
-import os, random, shutil
+import os, random, shutil, json
 from tensorflow import keras
 from PIL import Image
+import numpy as np
 
 def clear_dir(folder_path,keep_files):
     """Removes all files/folders in the given directory that are not in the given list.
@@ -93,3 +94,70 @@ def confirm_image_readability(directory, save_dir=None, bands=3):
                     shutil.copy2(image_path,os.path.join(save_dir, category))
             except Exception as e:
                 print(f"Error reading image: {image_path}")
+
+def convert_json_to_ndjson(input_file, output_file):
+    # Read JSON data from the input file
+    with open(input_file, 'r') as f:
+        json_data = json.load(f)
+
+    # Open the output file in write mode
+    with open(output_file, 'w') as f:
+        # Iterate through the JSON data
+        for idx, entry in enumerate(json_data):
+            # If it's not the first entry, add a newline before writing
+            if idx > 0:
+                f.write("\n")
+            # Write each entry (dictionary) to a new line
+            json.dump(entry, f)
+            
+def count_ndjson_lines(file_path):
+    """Counts the number of lines in a given NDJSON file
+
+    Args:
+        file_path (str): file path to NDJSON file
+
+    Returns:
+        int: Number of lines in NDJSON file
+    """    
+    line_count = 0
+    with open(file_path, 'r') as file:
+        for line in file:
+            line_count += 1
+    return line_count
+
+def create_mask(bounding_boxes, image_width, image_height):
+    mask = np.zeros((image_height, image_width), dtype=np.uint8)
+
+    for box in bounding_boxes:
+        left = int(box['left'])
+        top = int(box['top'])
+        width = int(box['width'])
+        height = int(box['height'])
+
+        # Ensure the bounding box stays within the image boundaries
+        left = max(0, left)
+        top = max(0, top)
+        right = min(image_width - 1, left + width - 1)
+        bottom = min(image_height - 1, top + height - 1)
+
+        # Set the pixels inside the bounding box to 1 (white)
+        mask[top:bottom + 1, left:right + 1] = 1
+    return mask
+
+def convert_image_mode(file_path, target_mode='RGB'):
+    """Converts image to the given image mode
+
+    Args:
+        file_path (str): Image path
+        target_mode (str): image mode to convert to. Defaults to RGB.
+
+    Returns:
+        str: File path if the image fails to convert
+    """    
+    try:
+        img = Image.open(file_path)
+        if img.mode != target_mode:
+            img = img.convert(target_mode)
+            img.save(file_path)
+    except Exception:
+        return file_path

@@ -1,14 +1,13 @@
 # %%
 import os, string, argparse
 import ggl_img_scraper as ggl
-from PIL import Image
 from tqdm import tqdm
 from utils import *
 
 """
 ################################
 This file creates the basis for a proper file directory for a dataset to train the UNET in the super directory.
-To create the basis for the dataset, it creates a raw, training, and validation directory with sub-folders in each of them for the classes.
+To create the basis for the dataset, it creates a raw, training, and mask directory with sub-folders in each of them for the classes.
 The Classes are given from a txt file that is new-line delimited.
 The script then scrapes Google Images for images regarding the classes and saves them to the raw directory in their respective class folders.
 When scraped, image urls are stored in a database for later use.
@@ -30,10 +29,8 @@ The 'dataset_from_raw.py' file also moves files into the training dir and valida
 parser = argparse.ArgumentParser(description="File for scraping bird images from google images and processing them for machine learning.")
 parser.add_argument('ggl_api_key', help='Google API key that has "Custom Search API" enabled')
 parser.add_argument('--search_engine_id', help='Programmable Google Search Engine ID with "Image Search", "Safe Search", and "Search the Entire Web" enabled.',default='f1aca5d66c8d4435c')
-parser.add_argument('--birds_txt', help='TXT file input containing the new line delimited list of birds', default='..\\data\\bird_lists\\birds.txt')
-parser.add_argument('--raw_dir', help="Directory to store raw data",default='..\\data\\raw\\')
-parser.add_argument('--training_dir', help='Directory to store normalized data for training', default='..\\data\\training\\')
-parser.add_argument('--validation_dir', help="Directory to store normalized data for validation", default='..\\data\\validation\\')
+parser.add_argument('--birds_txt', help='TXT file input containing the new line delimited list of birds', default='..\\data\\dataset\\birds.txt')
+parser.add_argument('--dataset_dir', help="Directory to the dataset path",default='..\\data\\dataset\\')
 parser.add_argument("--num_images", help="Number of Images to download per bird", default=10)
 parser.add_argument("--db_name", help="Database path to stored saved image urls", default=".\\bird_im_urls.db")
 parser.add_argument("--buffer", help="Integer number that allows for error in the number of images saved", default=5)
@@ -45,10 +42,7 @@ config = vars(args)
 
 search_engine_id = config['search_engine_id']
 ggl_api_key = config['ggl_api_key']
-raw_dir = config['raw_dir']
-training_dir = config['training_dir']
-validation_dir = config['validation_dir']
-validation_split = float(config['validation_split']) # Takes 1/5 of the images for validation
+dataset_dir = config['dataset_dir']
 birds_txt = config['birds_txt']
 num_images = int(config['num_images'])
 db_name = config['db_name']
@@ -56,12 +50,16 @@ buffer = int(config['buffer'])
 clear_dirs = bool(config['clear_dirs'])
 remove_db = bool(config['remove_db'])
 
+raw_dir = dataset_dir + 'raw\\'
+masks_dir = dataset_dir + 'masks\\'
+training_dir = dataset_dir + 'training\\'
+
 # %% 
 ## Clear dir
 if clear_dirs:
     clear_dir(raw_dir, [])
     clear_dir(training_dir, [])
-    clear_dir(validation_dir, [])
+    clear_dir(masks_dir, [])
 if remove_db and os.path.exists(db_name):
     os.remove(db_name)
     if os.path.exists(db_name+"-journal"):
@@ -85,8 +83,8 @@ for bird in birds:
         os.makedirs(raw_dir + bird + '\\')
     if not os.path.exists(training_dir + bird + '\\'):
         os.makedirs(training_dir + bird + '\\')
-    if not os.path.exists(validation_dir + bird + '\\'):
-        os.makedirs(validation_dir + bird + '\\')
+    if not os.path.exists(masks_dir + bird + '\\'):
+        os.makedirs(masks_dir + bird + '\\')
 
 # %%
 # Get Images for each bird from Google Images
@@ -113,3 +111,27 @@ for bird in tqdm(retry_lst.keys()):
     if (len(saved)+retry_lst[bird]+buffer) < num_images:
         print(saved)
         print(bird + " saved " + str(len(saved)+retry_lst[bird]) + " not " + str(num_images))
+
+input_img_paths = sorted(
+    [
+        os.path.join(root, file) 
+        for root, _, files in os.walk(raw_dir) 
+        for file in files 
+        if file.lower().endswith('.jpg') and not file.startswith(".")
+    ]
+)
+
+## Converts Images to RGB mode
+error_ims = [convert_image_mode(input_img) for input_img in input_img_paths if convert_image_mode(input_img, 'RGB') is not None]
+
+print("ERROR Removing:\n")
+print(error_ims)
+
+# Removes files that couldn't convert to RGB mode
+for im in error_ims:
+    if os.path.exists(im):
+        os.remove(im)
+    else:
+        print("ERROR REMOVEING: ", im)
+        
+print("REMOVE AND BAD DATA DOWNLOADED FROM SCRAPER BEFORE CONTINUING")

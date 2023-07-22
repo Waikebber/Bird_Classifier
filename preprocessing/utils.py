@@ -1,6 +1,6 @@
 import os, random, shutil, json
 from tensorflow import keras
-from PIL import Image
+from PIL import Image, ImageDraw
 import numpy as np
 
 def clear_dir(folder_path,keep_files):
@@ -125,23 +125,26 @@ def count_ndjson_lines(file_path):
             line_count += 1
     return line_count
 
-def create_mask(bounding_boxes, image_width, image_height):
-    mask = np.zeros((image_height, image_width), dtype=np.uint8)
+def create_mask(polygons, image_width, image_height):
+    """Creates a mask with the size of the width and height and the polygons within them.
 
-    for box in bounding_boxes:
-        left = int(box['left'])
-        top = int(box['top'])
-        width = int(box['width'])
-        height = int(box['height'])
+    Args:
+        polygons (lst): a list of polygon dictionaries. Keys: x, y
+        image_width (int): Width of the total image
+        image_height (int): Height of total image
 
-        # Ensure the bounding box stays within the image boundaries
-        left = max(0, left)
-        top = max(0, top)
-        right = min(image_width - 1, left + width - 1)
-        bottom = min(image_height - 1, top + height - 1)
+    Returns:
+        PIL.Image: An image mask of polygons
+    """    
+    # Create a blank image with a black background
+    mask = Image.new('L', (image_width, image_height), 0)
+    draw = ImageDraw.Draw(mask)
+    # Draw each polygon on the mask with a white (255) fill
+    for polygon in polygons:
+        # Convert polygon points from dictionaries to tuples of (x, y)
+        points = [(point['x'], point['y']) for point in polygon]
+        draw.polygon(points, outline=255, fill=255)
 
-        # Set the pixels inside the bounding box to 1 (white)
-        mask[top:bottom + 1, left:right + 1] = 1
     return mask
 
 def convert_image_mode(file_path, target_mode='RGB'):

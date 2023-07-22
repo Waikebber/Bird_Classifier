@@ -53,7 +53,7 @@ class LabelBox:
         """
         client = lb.Client(api_key=self.api_key)      
         subfolders = [subfolder for subfolder in os.listdir(self.directory_path) if os.path.isdir(os.path.join(self.directory_path, subfolder))]
-        tools = [ lb.Tool(tool=lb.Tool.Type.BBOX, name=name) for name in subfolders ]
+        tools = [ lb.Tool(tool=lb.Tool.Type.POLYGON, name=name) for name in subfolders ]
         ontology_builder = lb.OntologyBuilder(tools)
         ontology = client.create_ontology(ontology_name,
                                     ontology_builder.asdict())
@@ -180,14 +180,14 @@ class LabelBox:
         self.project.delete()
     
     def ndjson_get_bounds(self, file_path, from_api=True):
-        """Given an ndjson exported from LabelBox, creates a dictionary containing the image name and its related bounding boxes
+        """Given an ndjson exported from LabelBox, creates a dictionary containing the image name and its related polygons
             !!! from_api should be FALSE if NDJSON was downloaded directly from the LabelBox Website with everything selected
             
         Args:
             file_path (str): Path to ndjson file
             from_api (bool, optional): True when NDJSON was created using the LabelBox API. Defaults to True.
         Returns:
-            dict: A dictionary containing the image width, height, row id, and a List of dictionaries representing the bounding boxes. 
+            dict: A dictionary containing the image width, height, row id, and a List of dictionaries representing the polygons. 
                     Each dict is a bounding box with the atributes 'top', 'left', 'height', and 'width'
         """        
         data_list = {}
@@ -197,7 +197,7 @@ class LabelBox:
                 for line in tqdm(file):
                     try:
                         data = json.loads(line.strip())
-                        data_list[data['External ID'].split('/')[-1].split('\\')[-1]] = {'bbox': [data["Label"]['objects'][x]['bbox'] for x in range(len(data["Label"]['objects']))],
+                        data_list[data['External ID'].split('/')[-1].split('\\')[-1]] = {'polygon': [data["Label"]['objects'][x]['polygon'] for x in range(len(data["Label"]['objects']))],
                                                                                          'width': client.get_data_row(data['DataRow ID']).media_attributes['width'],
                                                                                          'height':client.get_data_row(data['DataRow ID']).media_attributes['height'],
                                                                                          'row_id': data['DataRow ID'] }
@@ -207,7 +207,7 @@ class LabelBox:
                 for line in tqdm(file):
                     try:
                         data = json.loads(line.strip())
-                        data_list[data['data_row']['external_id'].split('/')[-1].split('\\')[-1]] = {'bbox': [data['projects'][key]['labels'][0]['annotations']['objects'][x]['bounding_box'] for key in data['projects'].keys() for x in range(len(data['projects'][key]['labels'][0]['annotations']['objects']))],
+                        data_list[data['data_row']['external_id'].split('/')[-1].split('\\')[-1]] = {'polygon': [data['projects'][key]['labels'][0]['annotations']['objects'][x]['polygon'] for key in data['projects'].keys() for x in range(len(data['projects'][key]['labels'][0]['annotations']['objects']))],
                                                                                                     'width':data['media_attributes']['width'],
                                                                                                     'height':data['media_attributes']['height'],
                                                                                                     'row_id': data['data_row']['external_id']}

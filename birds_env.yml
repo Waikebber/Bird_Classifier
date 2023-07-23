@@ -1,13 +1,15 @@
-name: birds
+name: model
 channels:
   - defaults
 dependencies:
-  - python=3.9
+  - python=3.8
   - pip
   - pip:
-    - tensorflow==2.11
-    - scikit-learn
-    - matplotlib
     - segmentation-models
+    - tensorflow==2.5.0
+    - matplotlib
     - pillow
     - tqdm
+    - labelbox
+    - ipython
+    - ipykernel 

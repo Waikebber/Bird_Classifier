@@ -167,8 +167,9 @@ data/datasets/*/
 !data/projects/.gitkeep
 
 # results
-results/UNET/
-!results/UNET/.gitkeep
+UNET/results/
+!UNET/results/.gitkeep
+UNET/tests/
 
 # databases
 *.db

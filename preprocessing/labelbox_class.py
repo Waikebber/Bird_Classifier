@@ -188,7 +188,7 @@ class LabelBox:
             from_api (bool, optional): True when NDJSON was created using the LabelBox API. Defaults to True.
         Returns:
             dict: A dictionary containing the image width, height, row id, and a List of dictionaries representing the polygons. 
-                    Each dict is a bounding box with the atributes 'top', 'left', 'height', and 'width'
+                    Each dict is a polygon list of dictionaries with the atributes 'x' and 'y'
         """        
         data_list = {}
         with open(file_path, 'r') as file:
@@ -197,7 +197,7 @@ class LabelBox:
                 for line in tqdm(file):
                     try:
                         data = json.loads(line.strip())
-                        data_list[data['External ID'].split('/')[-1].split('\\')[-1]] = {'polygon': [data["Label"]['objects'][x]['polygon'] for x in range(len(data["Label"]['objects']))],
+                        data_list[data['External ID'].split('/')[-1].split('\\')[-1].replace("-","'")] = {'polygon': [data["Label"]['objects'][x]['polygon'] for x in range(len(data["Label"]['objects']))],
                                                                                          'width': client.get_data_row(data['DataRow ID']).media_attributes['width'],
                                                                                          'height':client.get_data_row(data['DataRow ID']).media_attributes['height'],
                                                                                          'row_id': data['DataRow ID'] }
@@ -207,7 +207,7 @@ class LabelBox:
                 for line in tqdm(file):
                     try:
                         data = json.loads(line.strip())
-                        data_list[data['data_row']['external_id'].split('/')[-1].split('\\')[-1]] = {'polygon': [data['projects'][key]['labels'][0]['annotations']['objects'][x]['polygon'] for key in data['projects'].keys() for x in range(len(data['projects'][key]['labels'][0]['annotations']['objects']))],
+                        data_list[data['data_row']['external_id'].split('/')[-1].split('\\')[-1].replace("-","'")] = {'polygon': [data['projects'][key]['labels'][0]['annotations']['objects'][x]['polygon'] for key in data['projects'].keys() for x in range(len(data['projects'][key]['labels'][0]['annotations']['objects']))],
                                                                                                     'width':data['media_attributes']['width'],
                                                                                                     'height':data['media_attributes']['height'],
                                                                                                     'row_id': data['data_row']['external_id']}

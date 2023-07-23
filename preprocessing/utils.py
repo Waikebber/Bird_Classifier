@@ -125,7 +125,7 @@ def count_ndjson_lines(file_path):
             line_count += 1
     return line_count
 
-def create_mask(polygons, image_width, image_height):
+def create_mask(polygons, image_width, image_height, fill_val):
     """Creates a mask with the size of the width and height and the polygons within them.
 
     Args:
@@ -143,7 +143,7 @@ def create_mask(polygons, image_width, image_height):
     for polygon in polygons:
         # Convert polygon points from dictionaries to tuples of (x, y)
         points = [(point['x'], point['y']) for point in polygon]
-        draw.polygon(points, outline=255, fill=255)
+        draw.polygon(points, outline=fill_val, fill=fill_val)
 
     return mask
 

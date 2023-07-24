@@ -9,24 +9,31 @@
         - [Image Scraping](#image-scraping)
         - [Upload Images to LabelBox](#upload-images-to-labelbox)
         - [Export Masks from LabelBox](#export-masks-from-labelbox)
-        - [Train Mask Model (Optional)](#train-mask-model-optional)
-        - [Create Masks from Model (Optional)](#create-masks-from-model-optional)
+        - [Automation](#automate-preprocessing)
+            - [Create a Smaller Labeling Dataset (For Large Datasets)](#create-a-smaller-labeling-dataset-for-large-datasets)
+            - [Create Masks (For Large Datasets)](#create-masks-for-large-datasets)
+            - [Create Masks from Model (For Large Datasets)](#create-masks-from-model-for-large-datasets)
+            - [Verifying the Dataset (For Large Datasets)](#verifying-the-dataset-for-large-datasets)
     - [Training](#training)
-        - [Train Unet (Not Pretrained](#train-unet-not-pretrained)
+        - [Train Unet](#train-unet-not-pretrained)
     - [Classifying](#classifying)
 - [File Structure](#file-structure)
 ____
 ## **Purpose**
 The purpose of this project is to create a machine learning (UNET) pipeline. The pipeline starts with data collection. Given a TXT file with class names, a directory will be created in a dataset that contains image data that was scraped from a Google Image search. These images are then uploaded to a project in [LabelBox](https://labelbox.com/) for manual annotation. After annotations are finished on the LabelBox website, annotations are then exported back to the repository. The annotations are then saved as masks, which completes the data creation needed to train a model. 
 
-There are three models that can be created. One is for mask creation, and the other two are for image classification.
-- The first Unet model is trained to create a mask for a given image. So if the initial dataset is very large, the model can be trained on a smaller dataset with manual labels. After training, the model can automate the process of creating masks for the larger dataset.
-- The `GPT_UNET` is a standard Unet that is one of the two Unets that can be used for image classification. This model doesn't include residuals.
-- The `RESIDUAL_UNET` is another standard Unet that is the other of the two Unets for image classification. This Unet utilizes residuals in its convolutions. Changes these according to performance on your datasets.
-
-
+This project utilizes a pretrained UNET model from the `segmentation-models` package. The model utilizes multi-class classifications to produce an image classification and an image segmentation.
 ### **FYI**
 Many variable names refer to birds in this repository. This is because the initial dataset that was created and used with this repository was common birds in the silicon valley area. The datasets for these are in a zip folder.
+____
+
+## **Automating Labels**
+For larger datasets there is a method of automating the labeling process. This is done by creating a smaller dataset from the larger dataset that was scrapped from google image. The smaller dataset is then sent to `LabelBox` for manual annotation. After the images are annotated. They are exported back to the repository, where masks are created from the exported `NDJSON` file. After creating masks, a UNET model is trained for binary classification. The model will identify be able to create masks for the general topic. After creating the model, it will be applied to the images in the larger dataset to create their annotation. The masks for images that already have annotations will be copied into the larger dataset and won't have a mask made for them through the model.  
+
+For this approach, make sure that all images of a class in the larger dataset only have the class object and background in the image. For example, if my dataset is for birds and a class is a species, only the species should be in the image provided in the classe's directory. If this is not done, an automated mask will improperly label the image for the class.  
+
+Masks created through this method should be checked and if needed should be replaced with a manual label to make sure the best training data is supplied.
+
 ____
 ## **Environment Creation**
 ```bash
@@ -40,9 +47,9 @@ ____
 
 ##### **Python Files**
 There are Python files with the same names as the Jupyter notebooks if needed.
-#### **[Image Scraping](/preprocessing/scrape_birds.ipynb)**
+#### **[Image Scraping](/preprocessing/scrape/scrape_birds.ipynb)**
 To start the dataset creation, this repository scrapes Google Images
-in the **`/preprocessing/scrape_birds.ipynb`** file. Given a Txt file with classes that are new-line delimited, the script will download images relavent to those classes to the dataset.  
+in the **`/preprocessing/scrape/scrape_birds.ipynb`** file. Given a Txt file with classes that are new-line delimited, the script will download images relavent to those classes to the dataset.  
 
 !! You must have a Google API key with [`Custom Search API`](https://console.cloud.google.com/apis/api/customsearch.googleapis.com/) enabled   
 !! Make sure that the Google search query is as accurate as possible.  
@@ -54,10 +61,10 @@ Manually clear out bad data from your dataset. Since this scrapes images from Go
 | :------------: | :------------: |:------------: |:------------: |
 | ggl_api_key  | str|Google Custom Image Search API Key | N/A|
 | search_engine_id |str | Programmable Google Search Engine ID | 'f1aca5d66c8d4435c'|
-| dataset_dir  | str|Directory to where the dataset will be created |*'..\\data\\datasets\\'*|
+| dataset_dir  | str|Directory to where the dataset will be created |*'..\\..\\data\\datasets\\'*|
 | num_images  | int|Number of images to scrape into the dataset | 10|
 | buffer  |int| Allows for a buffer around the `num_images` parameter |5 |
-| birds_txt  | str|TXT file path with classes new-line delimited | *'..\\data\\dataset\\birds.txt'*|
+| birds_txt  | str|TXT file path with classes new-line delimited | *'..\\..\\data\\dataset\\birds.txt'*|
 | db_name  | str|DB file path to store scraped image URLs | *".\\bird_im_urls.db"*|
 | clear_dirs  |bool| True when the dataset directories should be cleared |True |
 | remove_db  |bool| True when the database file should be cleared |True |
@@ -88,17 +95,80 @@ After manually labeling images in the dataset on LabelBox, running the script, *
 | proj_name  | str| Name of the project | "Birds"|
 | clear_dir  | bool|True if training and mask directories should be deleted. (KEEP FALSE) | False |
 ____
-#### **[Train Mask Model (Optional)]()**
-Eventually will do
+### **Automate Preprocessing**
+#### **[Create a Smaller Labeling Dataset (For Large Datasets)](/preprocessing/large_data_split.ipynb)**
+If a dataset is too large to manually label and it is more convinient to automatically create masks use the *`/preprocessing/large_data_split.ipynb`* file to create a smaller dataset. This dataset creates a smaller dataset from a larger dataset. The smaller dataset is then sent to `LabelBox` for manual annotations.  
+##### **Parameters**
+|  Parameter | Type|Description | Default |
+| :------------: | :------------: |:------------: |:------------: |
+| api_key  | str|LabelBox API Key | N/A|
+| large_dataset  | str| Large Dataset directory | N/A |
+| dataset_size  | int | Number of images in each class | 75 |
 ____
-#### [Create Masks from Model (Optional)]()
-Eventually will do
+#### **[Create Masks (For Large Datasets)](#export-masks-from-labelbox)**
+After making annotations for the smaller dataset, the annotations are then exported to the repository and made into masks. Use the *`/preprocessing/mask_from_labelbox.ipynb`* file to export and create the masks.
 ____
-### Training
-#### [Train Unet (Not Pretrained)](/UNET/train.ipynb)
+#### **[Create Model (For Large Datasets)](/preprocessing/binary_train.ipynb)**
+After making masks for the smaller dataset, the smaller dataset can be trained for binary classification. By running the UNET, a model will be created to make a mask for your classes and images in the larger dataset. The model is in the *`/preprocessing/binary_train.ipynb`* file.
+##### **Parameters**
+|  Parameter | Type|Description | Default |
+| :------------: | :------------: |:------------: |:------------: |
+| input_dir  | str| Image input directory | *".\\..\\data\\datasets\\small_birds_dataset\\raw\\"*|
+| target_dir  | str| Mask direectory | *'.\\..\\data\\datasets\\small_birds_dataset\\masks\\'*|
+| img_size  | tup| Tuple image size (width, height) | (256, 256)|
+| batch_size  | int | Training Batch Size | 20 |
+| epochs  | int| Number of epochs to train for | 65|
+| LR  | float | Training Learning Rate | 0.0001 |
+| validation_percent  | float | Percent of images for validation | 0.2 |
+| BACKBONE  | str | Training Backbone | 'efficientnetb3' |
+| activation  | str | Activation Function | 'sigmoid'|
+| loss  | str | Loss function | 'binary_crossentropy' |
+| num_classes  | int | Number of classes (binary) | 1 |
+| best_name  | str | Best Checkpoint Name | 'best_small_bin' |
+| recent_name  | str | Most Recent Checkpoint Name | 'recent_small_bin' |
+| results_path  | str | Checkpoint save path| '.\\preprocessing\\results\\' |
+____
+#### **[Create Masks from Model (For Large Datasets)]()**
+After creating the model for masking, it will be applied to all of the images, other than the manually annotated images, in the large dataset. After running the model on the dataset, make sure that all masks are accurate. Remove any poor annotations.
+____
+#### **[Verifying the Dataset (For Large Datasets)]()**
+This file will verify that you have a mask for every image in your large dataset. If there is not a mask for an image, it will upload them to `LabelBox` for manual labeling. Once manual labeling is completed, use the *`/preprocessing/mask_from_labelbox.ipynb`* for the masks. 
+____
 
+### **Training The Multiclass Model**
+#### **[Train Unet](/UNET/sm_train.ipynb)**
+Trains a multiclass segmentation model using a pretrained UNET from the `segmentation-models` package.
+##### **Parameters**
+|  Parameter | Type|Description | Default |
+| :------------: | :------------: |:------------: |:------------: |
+| input_dir  | str| Image input directory | *".\\..\\data\\datasets\\birds_dataset\\raw\\"*|
+| target_dir  | str| Mask direectory | *'.\\..\\data\\datasets\\birds_dataset\\masks\\'*|
+| img_size  | tup| Tuple image size (width, height) | (256, 256)|
+| batch_size  | int | Training Batch Size | 20 |
+| epochs  | int| Number of epochs to train for | 65|
+| LR  | float | Training Learning Rate | 0.0001 |
+| validation_percent  | float | Percent of images for validation | 0.2 |
+| BACKBONE  | str | Training Backbone | 'efficientnetb3' |
+| activation  | str | Activation Function | 'softmax'|
+| loss  | str | Loss function | 'categorical_crossentropy' |
+| best_name  | str | Best Checkpoint Name | 'best_short_soft' |
+| recent_name  | str | Most Recent Checkpoint Name | 'recent_short_soft' |
+| results_path  | str | Checkpoint save path| '.\\results\\' |
 ____
 ### Classifying
+#### **[Classify Model](/UNET/sm_classify.ipynb)**
+Given an image path or a directory to image paths, creates predictions with the model. The prediction creates a multiclass masks of the image. It also conducts image classifications on the image.
+##### **Parameters**
+|  Parameter | Type|Description | Default |
+| :------------: | :------------: |:------------: |:------------: |
+| input_dir  | str| Image input directory | *".\\..\\data\\datasets\\birds_dataset\\raw\\"*|
+| img_size  | tup| Tuple image size (width, height) | (256, 256)|
+| BACKBONE  | str | Training Backbone | 'efficientnetb3' |
+| activation  | str | Activation Function | 'softmax'|
+| results_dir  | str | Checkpoint save path| '.\\results\\' |
+| checkpoint  | str | Checkpoint Name | N/A |
+| image_path  | str | Path to an image or directory. Images to predict. | N/A |
+| save  | str | Directory to save predicted images | 'predicted_result' |
 ____
 
 ## File Structure
@@ -109,13 +179,17 @@ The `raw` and `masks` directory in datasets are created when running the scripts
 │   ├── projects
 │   └── datasets
 ├── preprocessing
-│   ├── scrape_birds.ipynb
 │   ├── im_to_labelbox.ipynb
-│   └── mask_from_labelbox.ipynb
+│   ├── mask_from_labelbox.ipynb
+│   ├── large_data_split.ipynb
+│   ├── binary_train.ipynb
+│   └── scrape
+│       └── scrape_birds.ipynb
 ├── UNET
-│   └── train.ipynb
+│   ├── sm_train.ipynb
+│   └── sm_classify.ipynb
 ├── results
-│   └── *.h5
+│   └── "saved models"
 ├── main.py
 └── README.md
 ```

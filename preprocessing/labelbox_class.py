@@ -52,8 +52,7 @@ class LabelBox:
             labelbox.Ontology: Ontology Object regarding the project
         """
         client = lb.Client(api_key=self.api_key)      
-        subfolders = [subfolder for subfolder in os.listdir(self.directory_path) if os.path.isdir(os.path.join(self.directory_path, subfolder))]
-        tools = [ lb.Tool(tool=lb.Tool.Type.POLYGON, name=name) for name in subfolders ]
+        tools = [ lb.Tool(tool=lb.Tool.Type.POLYGON, name=ontology_name)]
         ontology_builder = lb.OntologyBuilder(tools)
         ontology = client.create_ontology(ontology_name,
                                     ontology_builder.asdict())

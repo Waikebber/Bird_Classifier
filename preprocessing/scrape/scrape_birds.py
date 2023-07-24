@@ -52,13 +52,11 @@ remove_db = bool(config['remove_db'])
 
 raw_dir = dataset_dir + 'raw\\'
 masks_dir = dataset_dir + 'masks\\'
-training_dir = dataset_dir + 'training\\'
 
 # %% 
 ## Clear dir
 if clear_dirs:
     clear_dir(raw_dir, [])
-    clear_dir(training_dir, [])
     clear_dir(masks_dir, [])
 if remove_db and os.path.exists(db_name):
     os.remove(db_name)
@@ -81,8 +79,6 @@ birds.sort()
 for bird in birds:
     if not os.path.exists(raw_dir + bird + '\\'):
         os.makedirs(raw_dir + bird + '\\')
-    if not os.path.exists(training_dir + bird + '\\'):
-        os.makedirs(training_dir + bird + '\\')
     if not os.path.exists(masks_dir + bird + '\\'):
         os.makedirs(masks_dir + bird + '\\')
 

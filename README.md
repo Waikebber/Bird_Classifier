@@ -178,7 +178,7 @@ The *`/UNET/sm_train.ipynb`* script trains a multiclass segmentation model using
 | results_path  | str | Checkpoint save path| '.\\results\\{datetime.now()}' |
 ____
 ### [Image Classification](/UNET/sm_classify.ipynb)
-Given an image path or a directory to image paths, the *`/UNET/sm_classify.ipynb`* script creates predictions with the model. The prediction creates a multiclass masks of the image. It also conducts image classifications on the image.
+Given an image path or a directory to image paths, the *`/UNET/sm_classify.ipynb`* script creates predictions with the model. The prediction creates a multiclass masks of the image. It also conducts image classifications on the image. This script can also look up the predicted bird on AllAboutBirds.org.
 ##### **Parameters**
 |  Parameter | Type|Description | Default |
 | :------------: | :------------: |:------------: |:------------: |
@@ -190,6 +190,7 @@ Given an image path or a directory to image paths, the *`/UNET/sm_classify.ipynb
 | checkpoint  | str | Checkpoint Name | N/A |
 | image_path  | str | Path to an image or directory. Images to predict. | N/A |
 | save  | str | Directory to save predicted images | 'predicted_result' |
+| look_up  | bool | If True, searches the result in the default browser. | True |
 ____
 
 ## File Structure

@@ -12,6 +12,7 @@
         - [Automation](#automate-preprocessing)
             - [Create a Smaller Labeling Dataset (For Large Datasets)](#create-a-smaller-labeling-dataset-for-large-datasets)
             - [Create Masks (For Large Datasets)](#create-masks-for-large-datasets)
+            - [Create Mask Model (For Large Datasets)](#create-model-for-large-datasets)
             - [Create Masks from Model (For Large Datasets)](#create-masks-from-model-for-large-datasets)
             - [Verifying the Dataset (For Large Datasets)](#verifying-the-dataset-for-large-datasets)
     - [Training the Multiclass Model](#training-the-multiclass-model)

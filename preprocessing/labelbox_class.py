@@ -5,14 +5,16 @@ import labelbox as lb
 from labelbox import Project, Dataset
 from labelbox.exceptions import InvalidAttributeError
 class LabelBox:
-    def __init__(self, api_key, directory_path=None, project_name=None, ontology_name =None, proj_id = None):
+    def __init__(self, api_key, directory_path=None, project_name=None, ontology_name=None, proj_id=None, img_lst=None):
         self.api_key = api_key
         self.directory_path = directory_path
         self.ontology =None
         client = lb.Client(api_key=self.api_key)
-        if proj_id is None:
+        if directory_path is not None or img_lst is not None:
+            if directory_path is not None and img_lst is not None:
+                raise Exception("Arguements directory_path and img_lst were both used. Please only use one.")
             self.project = client.create_project(name=project_name,media_type=lb.MediaType.Image,queue_mode='BATCH')
-            errors = self.labelbox_proj(ontology_name)
+            errors = self.labelbox_proj(ontology_name, img_lst=img_lst)
             for error in errors:
                 print(f'ERROR UPLOADING DATASET: {error}')
         else:
@@ -30,16 +32,21 @@ class LabelBox:
             f.write(response.content)
         convert_json_to_ndjson(file_path,file_path)
         
-    def labelbox_proj(self, ontology_name):
+    def labelbox_proj(self, ontology_name, img_lst=None):
         """Creates LabelBox datasets for every class in the Project.
             Also makes an ontology with each class for the Project.
-
+        Args:
+            img_lst (lst): List of image paths to be uploaded
+            ontology_name (str): Ontology Name to be made
         Returns:
             lst: List of datasets that had an error being created
         """
-        subfolders = [subfolder for subfolder in os.listdir(self.directory_path) if os.path.isdir(os.path.join(self.directory_path, subfolder))]
-        for subfolder in tqdm(subfolders):
-            self.labelbox_dataset(os.path.join(self.directory_path,subfolder),subfolder)
+        if imglst is not None:
+            self.labelbox_dataset(dataset_name=subfolder,im_lst=im_lst)
+        else:
+            subfolders = [subfolder for subfolder in os.listdir(self.directory_path) if os.path.isdir(os.path.join(self.directory_path, subfolder))]
+            for subfolder in tqdm(subfolders):
+                self.labelbox_dataset(dataset_name=subfolder,directory=os.path.join(self.directory_path,subfolder))
         errors = self.find_error_sets()
         self.ontology = self.make_ontology(ontology_name)
         return errors
@@ -47,6 +54,8 @@ class LabelBox:
     def make_ontology(self,ontology_name):
         """Creates the ontology for the project.
             Each class is a folder name in the init directory.
+        Args:
+            ontology_name (str): Name of Ontology to be made
 
         Returns:
             labelbox.Ontology: Ontology Object regarding the project
@@ -59,17 +68,24 @@ class LabelBox:
         self.project.setup_editor(ontology)
         return ontology.uid
     
-    def labelbox_dataset(self, directory,dataset_name, retry=0):
+    def labelbox_dataset(self,dataset_name, directory=None, im_lst=None, retry=0):
         """Creates a dataset in labelbox from all the files in a given dataset. 
             Named after the dataset_name.
 
         Args:
-            directory (str): Directory path to be made into dataset
             dataset_name (str): Name of the dataset to be made
+            directory (str, optional): Directory path to be made into dataset. Defaults to None
+            im_lst (lst, optional): List of Image paths to be made into a Dataset. Defaults to None.
+            retry (int, optional): Number of times it has re-attempted uploading after failing. 
+        
+        !!! NOTE: directory and im_lst should not be used at the same time
         """
         client = lb.Client(api_key=self.api_key)
         dataset = client.create_dataset(name=dataset_name)
-        local_file_paths = [ os.path.join(directory ,x) for x in os.listdir(os.path.join(directory))]
+        if directory is not None:
+            local_file_paths = [ os.path.join(directory ,x) for x in os.listdir(os.path.join(directory))]
+        if im_lst is not None:
+            local_file_paths = im_lst
         try:
             task = dataset.create_data_rows(local_file_paths)
             task.wait_till_done()
@@ -78,7 +94,10 @@ class LabelBox:
             if retry < 3:
                 dataset.delete()
                 retry +=1
-                self.labelbox_dataset(directory, dataset_name, retry)
+                self.labelbox_dataset(dataset_name=dataset_name,
+                                      directory=directory, 
+                                      im_lst=im_lst,
+                                      retry=retry)
     
     def labelbox_dataset_lst(self, dataset_name, data_lst):
         """ Add the files in the list of data to the dataset one at a time.

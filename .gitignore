@@ -171,7 +171,8 @@ UNET/results/
 !UNET/results/.gitkeep
 UNET/tests/
 UNET/predicted_result/
-
+preprocessing/binary_model/results
+preprocessing/binary_model/tests
 # databases
 *.db
 

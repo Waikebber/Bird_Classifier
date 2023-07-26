@@ -19,11 +19,9 @@ https://keras.io/examples/vision/oxford_pets_image_segmentation/
 """
 class Dataloader(keras.utils.Sequence):
     """Helper to iterate over the data (as Numpy arrays)."""
-
-    def __init__(self, batch_size, img_size, input_img_paths, target_img_paths=None, num_classes=None, data_gen=None):
+    def __init__(self, batch_size, img_size, input_img_paths, target_img_paths=None, data_gen=None):
         self.batch_size = batch_size
         self.img_size = img_size
-        self.num_classes = num_classes
         self.data_gen = data_gen
         self.input_img_paths = input_img_paths
         self.target_img_paths = target_img_paths
@@ -46,11 +44,10 @@ class Dataloader(keras.utils.Sequence):
 
         if self.is_training:
             batch_target_img_paths = self.target_img_paths[i: i + self.batch_size]
-            y = np.zeros((self.batch_size,) + self.img_size + (self.num_classes,), dtype="uint8")
+            y = np.zeros((self.batch_size,) + self.img_size + (1,), dtype='float32') 
             for j, path in enumerate(batch_target_img_paths):
                 mask = self.load_mask(path)
-                mask = self.to_categorical(mask)
-                y[j] = mask
+                y[j] = np.expand_dims(mask, axis=-1) 
             return x, y
         else:
             return x
@@ -58,14 +55,7 @@ class Dataloader(keras.utils.Sequence):
     def load_mask(self, path):
         img = load_img(path, target_size=self.img_size, color_mode="grayscale")
         img_array = keras.preprocessing.image.img_to_array(img)
-        mask = img_array.astype(int)
-        mask = np.squeeze(mask, axis=-1) 
-        mask = np.where(mask > 0, 1, 0)  # Converts any pixel value other than 0 to 1
+        mask = img_array.astype('float32')
+        mask = np.squeeze(mask, axis=-1)
+        mask = np.where(mask > 0, 1, 0)
         return mask
-    
-    # You also need to update your to_categorical method
-    def to_categorical(self, mask):
-        mask = keras.utils.to_categorical(mask, num_classes=self.num_classes)
-        mask = np.max(mask, axis=-1, keepdims=True)  # Converts multi-class mask to binary mask
-        return mask
-    

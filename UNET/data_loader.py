@@ -141,3 +141,22 @@ def predict_and_visualize(model, dataloader, num_classes, img_size, class_names,
         plt.axis('off')
         plt.legend(handles=patches, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
         plt.show()
+
+def bird_url(bird_name):
+    """Creates a url to AllAboutBirds.org given a bird name. 
+        Looks up the bird if url is valid.
+
+    Args:
+        bird_name (str): Name of a Bird
+
+    Returns:
+        str: URL to AllAboutBirds.org page for bird
+    """    
+    base_url = "https://www.allaboutbirds.org/guide/"
+    url = base_url + bird_name.replace(' ', '_')
+    if webbrowser.open_new(url):
+            print("Opening URL: ", url)
+            webbrowser.open_new(url)
+        else:
+            print("Error Opening URL: ", url)
+    return url

@@ -14,9 +14,8 @@
             - [Create Masks (For Large Datasets)](#create-masks-for-large-datasets)
             - [Create Masks from Model (For Large Datasets)](#create-masks-from-model-for-large-datasets)
             - [Verifying the Dataset (For Large Datasets)](#verifying-the-dataset-for-large-datasets)
-    - [Training](#training)
-        - [Train Unet](#train-unet-not-pretrained)
-    - [Classifying](#classifying)
+    - [Training the Multiclass Model](#training-the-multiclass-model)
+    - [Image Classification](#image-classification)
 - [File Structure](#file-structure)
 ____
 ## **Purpose**
@@ -38,7 +37,7 @@ ____
 ## **Environment Creation**
 ```bash
 conda env create -f birds_env.yml
-conda activate birds
+conda activate model
 ```
 ____
 ## **Steps**
@@ -106,58 +105,80 @@ If a dataset is too large to manually label and it is more convinient to automat
 | dataset_size  | int | Number of images in each class | 75 |
 ____
 #### **[Create Masks (For Large Datasets)](#export-masks-from-labelbox)**
-After making annotations for the smaller dataset, the annotations are then exported to the repository and made into masks. Use the *`/preprocessing/mask_from_labelbox.ipynb`* file to export and create the masks.
+After making annotations for the smaller dataset, the annotations are then exported to the repository and made into masks. Use the *`/preprocessing/mask_from_labelbox.ipynb`* file to export and create the masks.  
+**Note that this may decrease mask accuracy**
 ____
-#### **[Create Model (For Large Datasets)](/preprocessing/binary_train.ipynb)**
-After making masks for the smaller dataset, the smaller dataset can be trained for binary classification. By running the UNET, a model will be created to make a mask for your classes and images in the larger dataset. The model is in the *`/preprocessing/binary_train.ipynb`* file.
+#### **[Create Model (For Large Datasets)](/preprocessing/binary_model/binary_train.ipynb)**
+After making masks for the smaller dataset, the smaller dataset can be trained for binary classification. By running the UNET, a model will be created to make a mask for your classes and images in the larger dataset. The model is in the *`/preprocessing/binary_model/binary_train.ipynb`* file.
 ##### **Parameters**
 |  Parameter | Type|Description | Default |
 | :------------: | :------------: |:------------: |:------------: |
 | input_dir  | str| Image input directory | *".\\..\\data\\datasets\\small_birds_dataset\\raw\\"*|
 | target_dir  | str| Mask direectory | *'.\\..\\data\\datasets\\small_birds_dataset\\masks\\'*|
+| curves  | bool | Shows and saves a graph of the metrics | True|
 | img_size  | tup| Tuple image size (width, height) | (256, 256)|
-| batch_size  | int | Training Batch Size | 20 |
-| epochs  | int| Number of epochs to train for | 65|
-| LR  | float | Training Learning Rate | 0.0001 |
+| batch_size  | int | Training Batch Size | 32 |
+| epochs  | int| Number of epochs to train for | 20|
+| LR  | float | Training Learning Rate | 1e-4 |
 | validation_percent  | float | Percent of images for validation | 0.2 |
 | BACKBONE  | str | Training Backbone | 'efficientnetb3' |
 | activation  | str | Activation Function | 'sigmoid'|
-| loss  | str | Loss function | 'binary_crossentropy' |
-| num_classes  | int | Number of classes (binary) | 1 |
+| loss  | sm.losses | Loss function | sm.losses.BinaryCELoss() + sm.losses.DiceLoss()|
+| metrics  | sm.metrics | Metric function | [sm.metrics.IOUScore(threshold=0.5), sm.metrics.FScore(threshold=0.5)]|
+| num_classes  | int | Number of classes (binary) | 2 |
 | best_name  | str | Best Checkpoint Name | 'best_small_bin' |
 | recent_name  | str | Most Recent Checkpoint Name | 'recent_small_bin' |
-| results_path  | str | Checkpoint save path| '.\\preprocessing\\results\\' |
+| results_path  | str | Checkpoint save path| '.\\preprocessing\\results\\{datetime.now()}' |
+_____
+#### **[Create Masks from Model (For Large Datasets)](/preprocessing/binary_model/binary_classify.ipynb)**
+After creating the model for masking, the model's predictions will be applied to all of the images, other than the manually annotated images, in the large dataset. This is done in the `/preprocessing/binary_model/binary_classify.ipynb` file.After running the model on the dataset, make sure that all masks are accurate. Remove any poor annotations.
+##### **Parameters**
+|  Parameter | Type|Description | Default |
+| :------------: | :------------: |:------------: |:------------: |
+| img_size  | tup| Tuple image size (width, height) | (256, 256)|
+| BACKBONE  | str | Training Backbone | 'efficientnetb3' |
+| activation  | str | Activation Function | 'sigmoid'|
+| num_classes  | int | Number of classes (binary) | 2 |
+| checkpoint_dir  | str| Directory to checkpoint savedirectory | *'.\\results\\'*|
+| checkpoint  | str| Checkpoint path | N/A|
+| small_dataset  | str| Directory path to smaller dataset. For moving manually made masks | N/A|
+| dataset_dir  | str| Directory path to full sized (larger) dataset | N/A|
+
 ____
-#### **[Create Masks from Model (For Large Datasets)]()**
-After creating the model for masking, it will be applied to all of the images, other than the manually annotated images, in the large dataset. After running the model on the dataset, make sure that all masks are accurate. Remove any poor annotations.
-____
-#### **[Verifying the Dataset (For Large Datasets)]()**
-This file will verify that you have a mask for every image in your large dataset. If there is not a mask for an image, it will upload them to `LabelBox` for manual labeling. Once manual labeling is completed, use the *`/preprocessing/mask_from_labelbox.ipynb`* for the masks. 
+#### **[Verifying the Dataset (For Large Datasets)](/preprocessing/verify_masks.ipynb)**
+The *`/preprocessing/verify_masks.ipynb`* file verifies that you have a mask for every image in your large dataset. If there is not a mask for an image, it will upload them to `LabelBox` for manual labeling. Once manual labeling is completed, use the *`/preprocessing/mask_from_labelbox.ipynb`* for the masks. 
+##### **Parameters**
+|  Parameter | Type|Description | Default |
+| :------------: | :------------: |:------------: |:------------: |
+| api_key  | str|LabelBox API Key | N/A|
+| dataset_dir  | str| Dataset directory with *`raw`* and *`masks`* subdirectories| N/A |
+| project_name  | str|Project Name |"Birds_Retry"|
+| ontology_name  | str|Ontology Name | "Birds_Retry"|
 ____
 
-### **Training The Multiclass Model**
-#### **[Train Unet](/UNET/sm_train.ipynb)**
-Trains a multiclass segmentation model using a pretrained UNET from the `segmentation-models` package.
+### **[Training The Multiclass Model](/UNET/sm_train.ipynb)**
+The *`/UNET/sm_train.ipynb`* script trains a multiclass segmentation model using a pretrained UNET from the `segmentation-models` package.
 ##### **Parameters**
 |  Parameter | Type|Description | Default |
 | :------------: | :------------: |:------------: |:------------: |
 | input_dir  | str| Image input directory | *".\\..\\data\\datasets\\birds_dataset\\raw\\"*|
 | target_dir  | str| Mask direectory | *'.\\..\\data\\datasets\\birds_dataset\\masks\\'*|
+| curves  | bool | Shows and saves a graph of the metrics | True|
 | img_size  | tup| Tuple image size (width, height) | (256, 256)|
-| batch_size  | int | Training Batch Size | 20 |
+| batch_size  | int | Training Batch Size | 32 |
 | epochs  | int| Number of epochs to train for | 65|
 | LR  | float | Training Learning Rate | 0.0001 |
 | validation_percent  | float | Percent of images for validation | 0.2 |
 | BACKBONE  | str | Training Backbone | 'efficientnetb3' |
 | activation  | str | Activation Function | 'softmax'|
 | loss  | str | Loss function | 'categorical_crossentropy' |
+| metrics  | lst | List of metrics | [keras.metrics.CategoricalAccuracy()] |
 | best_name  | str | Best Checkpoint Name | 'best_short_soft' |
 | recent_name  | str | Most Recent Checkpoint Name | 'recent_short_soft' |
-| results_path  | str | Checkpoint save path| '.\\results\\' |
+| results_path  | str | Checkpoint save path| '.\\results\\{datetime.now()}' |
 ____
-### Classifying
-#### **[Classify Model](/UNET/sm_classify.ipynb)**
-Given an image path or a directory to image paths, creates predictions with the model. The prediction creates a multiclass masks of the image. It also conducts image classifications on the image.
+### [Image Classification](/UNET/sm_classify.ipynb)
+Given an image path or a directory to image paths, the *`/UNET/sm_classify.ipynb`* script creates predictions with the model. The prediction creates a multiclass masks of the image. It also conducts image classifications on the image.
 ##### **Parameters**
 |  Parameter | Type|Description | Default |
 | :------------: | :------------: |:------------: |:------------: |
@@ -183,13 +204,18 @@ The `raw` and `masks` directory in datasets are created when running the scripts
 │   ├── mask_from_labelbox.ipynb
 │   ├── large_data_split.ipynb
 │   ├── binary_train.ipynb
+│   │   ├── binary_train.ipynb
+│   │   ├── binary_classify.ipynb
+│   │   └── results
+│   │       └── "saved binary models"
+│   ├── verify_masks.ipynb
 │   └── scrape
 │       └── scrape_birds.ipynb
 ├── UNET
 │   ├── sm_train.ipynb
-│   └── sm_classify.ipynb
-├── results
-│   └── "saved models"
+│   ├── sm_classify.ipynb
+│   └── results
+│       └── "saved multiclass models"
 ├── main.py
 └── README.md
 ```

@@ -7,6 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from PIL import ImageOps, Image
+import webbrowser
 
 try:
     from tensorflow.keras.utils import load_img, to_categorical, img_to_array
@@ -155,8 +156,8 @@ def bird_url(bird_name):
     base_url = "https://www.allaboutbirds.org/guide/"
     url = base_url + bird_name.replace(' ', '_')
     if webbrowser.open_new(url):
-            print("Opening URL: ", url)
-            webbrowser.open_new(url)
-        else:
-            print("Error Opening URL: ", url)
+        print("Opening URL: ", url)
+        webbrowser.open_new(url)
+    else:
+        print("Error Opening URL: ", url)
     return url

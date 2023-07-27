@@ -19,6 +19,8 @@ tf.get_logger().setLevel(tf.compat.v1.logging.ERROR)
 import warnings
 warnings.filterwarnings('ignore')
 
+physical_devices = tf.config.list_physical_devices('GPU')
+print("Num GPUs Available: ", len(physical_devices))
 # %%
 ## Training images and masks
 input_dir = ".\\..\\..\\data\\datasets\\small_birds_dataset\\raw\\"

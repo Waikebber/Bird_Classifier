@@ -21,8 +21,8 @@ warnings.filterwarnings('ignore')
 
 # %%
 ## Training images and masks
-input_dir = ".\\..\\data\\datasets\\smaller_birds_dataset\\raw\\"
-target_dir = '.\\..\\data\\datasets\\smaller_birds_dataset\\masks\\'
+input_dir = ".\\..\\data\\datasets\\birds_dataset\\raw\\"
+target_dir = '.\\..\\data\\datasets\\birds_dataset\\masks\\'
 
 ## Training image size
 # img_size = (1024, 1024)
@@ -30,21 +30,28 @@ target_dir = '.\\..\\data\\datasets\\smaller_birds_dataset\\masks\\'
 img_size = (256, 256)
 # img_size = (128, 128)
 
+## For metrics graphs
+curves =True
+
 ## Model Params
-batch_size = 20
-epochs = 65
+batch_size = 32
+total_epochs = 200
+epochs = total_epochs//2
 LR = 0.0001
 validation_percent = 0.2
 BACKBONE = 'efficientnetb3'
 activation = 'softmax'
 loss='categorical_crossentropy'
+metrics = [keras.metrics.CategoricalAccuracy(), 
+           sm.metrics.IOUScore(class_weights=None), 
+           sm.metrics.FScore(class_weights=None) ]
 
 ## Model Checkpoint paths
-best_name = 'best_short_soft'
-recent_name = 'recent_short_soft'
-results_path = '.\\results\\'
-best_path = f'{epochs}_{img_size[0]}x{img_size[1]}_{best_name}_checkpoint_{datetime.now().replace(second=0).strftime("%Y-%m-%d_%H-%M")}'
-recent_path = f'{epochs}_{img_size[0]}x{img_size[1]}_{recent_name}_checkpoint_{datetime.now().replace(second=0).strftime("%Y-%m-%d_%H-%M")}'
+best_name = 'best_soft'
+recent_name = 'recent_soft'
+results_path = f'.\\results\\{datetime.now().replace(second=0).strftime("%Y-%m-%d_%H-%M")}'
+best_path = f'{epochs}_{img_size[0]}x{img_size[1]}_{best_name}_checkpoint'
+recent_path = f'{epochs}_{img_size[0]}x{img_size[1]}_{recent_name}_checkpoint'
 
 
 # %%
@@ -119,6 +126,7 @@ train_data_gen_args = dict(
     shear_range=0.2,
     zoom_range=0.2,
     horizontal_flip=True,
+    vertical_flip=True,
     fill_mode='nearest'
 )
 train_data_gen = ImageDataGenerator(**train_data_gen_args)
@@ -143,20 +151,24 @@ model = sm.Unet(
     activation=activation
 )
 
-# Freeze the encoder
+# Freeze the backbone layers
 for layer in model.layers:
     if 'encoder' in layer.name:
         layer.trainable = False
-# model.trainable = False
 
 # Compile the model
 model.compile(
     optimizer=tf.keras.optimizers.Adam(LR),
     loss=loss, 
-    metrics=[keras.metrics.CategoricalAccuracy()]
+    metrics=metrics
 )
 
 # Set callbacks checkpoints
+early_stopping_cb = tf.keras.callbacks.EarlyStopping(
+    monitor='val_loss', 
+    patience=5, 
+    restore_best_weights=True
+)
 callbacks = [
     keras.callbacks.ModelCheckpoint(os.path.join(results_path,best_path), 
                                     monitor='val_loss',
@@ -166,6 +178,7 @@ callbacks = [
                                     verbose=0
                                     ),
     keras.callbacks.ModelCheckpoint(os.path.join(results_path,recent_path)),
+    early_stopping_cb
 ]
 
 # %%
@@ -175,5 +188,64 @@ history = model.fit(train_gen,
                     validation_data=val_gen,
                     callbacks=callbacks
                     )
+
+# %%
+# Unfreeze the backbone model
+for layer in model.layers:
+    if 'encoder' in layer.name:
+        layer.trainable = True
+
+# Compile the model with a lower learning rate
+fine_tune_lr = LR / 10
+model.compile(
+    optimizer=tf.keras.optimizers.Adam(fine_tune_lr),
+    loss=loss, 
+    metrics=metrics
+)
+
+# %%
+# Train with Backbone 
+history_fine = model.fit(train_gen, 
+                         epochs=epochs*2,
+                         initial_epoch=history.epoch[-1],
+                         validation_data=val_gen,
+                         callbacks=callbacks
+                         )
+
+# %%
+if curves:
+    plt.figure(figsize=(12, 12))
+    plt.subplot(2, 2, 1)
+    plt.plot(history.history['loss'], label='Training Loss')
+    plt.plot(history.history['val_loss'], label='Validation Loss')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.title('Training and Validation Loss')
+    plt.subplot(2, 2, 2)
+    plt.plot(history.history['iou_score'], label='Training IoU')
+    plt.plot(history.history['val_iou_score'], label='Validation IoU')
+    plt.xlabel('Epoch')
+    plt.ylabel('IoU Score')
+    plt.legend()
+    plt.title('Training and Validation IoU Score')
+    plt.subplot(2, 2, 3)
+    plt.plot(history.history['f1_score'], label='Training F1 Score')
+    plt.plot(history.history['val_f1_score'], label='Validation F1 Score')
+    plt.xlabel('Epoch')
+    plt.ylabel('F1 Score')
+    plt.legend()
+    plt.title('Training and Validation F1 Score')
+    plt.subplot(2, 2, 4)
+    plt.plot(history.history['categorical_accuracy'], label='Training Accuracy')
+    plt.plot(history.history['val_categorical_accuracy'], label='Validation Accuracy')
+    plt.xlabel('Epoch')
+    plt.ylabel('Accuracy')
+    plt.legend()
+    plt.title('Training and Validation Accuracy')
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(results_path,'training_metrics.png'))
+    plt.show()
 
 

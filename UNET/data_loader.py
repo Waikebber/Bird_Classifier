@@ -155,9 +155,9 @@ def bird_url(bird_name):
     """    
     base_url = "https://www.allaboutbirds.org/guide/"
     url = base_url + bird_name.replace(' ', '_')
-    if webbrowser.open_new(url):
+    try:
         print("Opening URL: ", url)
         webbrowser.open_new(url)
-    else:
+    except Exception:
         print("Error Opening URL: ", url)
     return url

@@ -40,6 +40,7 @@ ____
 conda env create -f birds_env.yml
 conda activate model
 ```
+For GPU training on Linux Systems use this [TensorFlow tutorial](https://www.tensorflow.org/install/pip) after activating the `model` environment. 
 ____
 ## **Steps**
 ____

@@ -2,7 +2,7 @@
 
 import os, random,sys
 from datetime import datetime
-
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import tensorflow as tf
 from tensorflow import keras
 os.environ["SM_FRAMEWORK"] = "tf.keras" 
@@ -18,26 +18,28 @@ tf.get_logger().setLevel(tf.compat.v1.logging.ERROR)
 
 import warnings
 warnings.filterwarnings('ignore')
+import absl.logging
+absl.logging.set_verbosity(absl.logging.ERROR)
 
 physical_devices = tf.config.list_physical_devices('GPU')
 print("Num GPUs Available: ", len(physical_devices))
 # %%
 ## Training images and masks
-input_dir = ".\\..\\..\\data\\datasets\\small_birds_dataset\\raw\\"
-target_dir = '.\\..\\..\\data\\datasets\\small_birds_dataset\\masks\\'
+input_dir = "./../../data/datasets/small_birds_dataset/raw/"
+target_dir = './../../data/datasets/small_birds_dataset/masks/'
 
 ## Show Metrics Graphs
 curves = True
 
 ## Training image size
-# img_size = (1024, 1024)
+img_size = (1024, 1024)
 # img_size = (512, 512)
-img_size = (256, 256)
+# img_size = (256, 256)
 # img_size = (128, 128)
 
 ## Model Params
 batch_size = 32
-epochs_per_freeze = 20
+epochs_per_freeze = 100
 LR = 1e-4
 validation_percent = 0.2
 BACKBONE = 'efficientnetb3'
@@ -49,11 +51,12 @@ num_classes = 2
 ## Model Checkpoint paths
 best_name = 'best_small_bin'
 recent_name = 'recent_small_bin'
-results_path = f'.\\results\\{datetime.now().replace(second=0).strftime("%Y-%m-%d_%H-%M")}\\'
+results_path = os.path.join('results',f'{datetime.now().replace(second=0).strftime("%Y-%m-%d_%H-%M")}')
 best_path = f'{epochs_per_freeze}_{img_size[0]}x{img_size[1]}_{best_name}_checkpoint'
 recent_path = f'{epochs_per_freeze}_{img_size[0]}x{img_size[1]}_{recent_name}_checkpoint'
 if not os.path.exists(results_path):
     os.makedirs(results_path)
+
 
 
 # %%
@@ -74,7 +77,6 @@ target_img_paths = sorted(
         if file.lower().endswith('.png') and not file.startswith(".")
     ]
 )
-
 # %%
 ## Find masks and images that aren't found in eachother's directories
 mismatched_paths =[]
@@ -235,6 +237,6 @@ if curves:
     plt.title('Training and Validation IOU Scores')
     plt.tight_layout()
     plt.savefig(os.path.join(results_path,'training_metrics.png'))
-    plt.show()
+    # plt.show()
 
 

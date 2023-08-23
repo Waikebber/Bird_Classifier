@@ -206,7 +206,7 @@ The `raw` and `masks` directory in datasets are created when running the scripts
 │   ├── im_to_labelbox.ipynb
 │   ├── mask_from_labelbox.ipynb
 │   ├── large_data_split.ipynb
-│   ├── binary_train.ipynb
+│   ├── binary_model
 │   │   ├── binary_train.ipynb
 │   │   ├── binary_classify.ipynb
 │   │   └── results

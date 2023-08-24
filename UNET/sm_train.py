@@ -24,8 +24,9 @@ physical_devices = tf.config.list_physical_devices('GPU')
 print("Num GPUs Available: ", len(physical_devices))
 # %%
 ## Training images and masks
-input_dir = ".\\..\\data\\datasets\\birds_dataset\\raw\\"
-target_dir = '.\\..\\data\\datasets\\birds_dataset\\masks\\'
+dataset = 'small_birds_dataset'
+input_dir = f".\\..\\data\\datasets\\{dataset}\\raw\\"
+target_dir = f'.\\..\\data\\datasets\\{dataset}\\masks\\'
 
 ## Training image size
 # img_size = (1024, 1024)
@@ -52,7 +53,7 @@ metrics = [keras.metrics.CategoricalAccuracy(),
 ## Model Checkpoint paths
 best_name = 'best_soft'
 recent_name = 'recent_soft'
-results_path = f'.\\results\\{datetime.now().replace(second=0).strftime("%Y-%m-%d_%H-%M")}'
+results_path = f'.\\results\\{dataset}\\{datetime.now().replace(second=0).strftime("%Y-%m-%d_%H-%M")}'
 best_path = f'{epochs}_{img_size[0]}x{img_size[1]}_{best_name}_checkpoint'
 recent_path = f'{epochs}_{img_size[0]}x{img_size[1]}_{recent_name}_checkpoint'
 

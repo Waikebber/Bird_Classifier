@@ -18,6 +18,7 @@
     - [Training the Multiclass Model](#training-the-multiclass-model)
     - [Image Classification](#image-classification)
 - [File Structure](#file-structure)
+- [Sample Dataset and Model](#sample-dataset-and-model)
 ____
 ## **Purpose**
 The purpose of this project is to create a machine learning (UNET) pipeline. The pipeline starts with data collection. Given a TXT file with class names, a directory will be created in a dataset that contains image data that was scraped from a Google Image search. These images are then uploaded to a project in [LabelBox](https://labelbox.com/) for manual annotation. After annotations are finished on the LabelBox website, annotations are then exported back to the repository. The annotations are then saved as masks, which completes the data creation needed to train a model. 
@@ -222,3 +223,25 @@ The `raw` and `masks` directory in datasets are created when running the scripts
 ├── main.py
 └── README.md
 ```
+____
+## Sample Dataset and Model
+### !!! DISCLAIMER !!!
+This dataset was created from a larger dataset.  
+Due to hardware and time restrictions, the model could not be run on a larger dataset and at a larger image size. The larger dataset was intended to have a mask dataset created from the binary model; however, given my computer's specifications it was not possible. This may be reattempted in the future with online resources.
+
+**Model Specifications:**
+|  Specifications | Value|
+| :------------: | :------------: |
+| Image Size  | 256x256|
+| Batch Size  | 32|
+| Initial Learning Rate  | 0.0001 | 
+| Validation Percentage  | 0.2 | 
+| BACKBONE  | 'efficientnetb3' | 
+| Activation Funtion  | 'softmax' |
+| Loss Funtion  | 'categorical_crossentropy' |
+| Frozen Epochs  | 87 |
+| Unfrozen Epochs  | 7 |
+
+The model can be downloaded from this GoogleDrive [link](https://drive.google.com/file/d/1q-d1tF5d-P0Ohb8ssCl0D-UgeKGbbR5G/view?usp=sharing).  
+The file is a 7zip file. Please use 7zip to uncompress the folder.
+____
